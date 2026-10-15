@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.local/
+.env
+.env.*
+!.env.example
+*.tgz
+coverage/
+.DS_Store
+opencode.json
+opencode.jsonc

@@ -1,0 +1,11 @@
+# Changelog
+
+## 0.1.0 — 2026-10-15
+
+- Per-request local/cloud routing with configurable model roles.
+- Text and optional image redaction review, editable outbound approval, and version-bound delegation.
+- Native progress, cancellation, recovery, and verified result delivery.
+- Unified material extraction Skill and native OpenCode TUI model setup, review, and lifecycle controls.
+- Native `opencode plugin add` onboarding, update and removal instructions, and contributor-only source setup.
+- Cross-platform artifact testing, release rehearsal, and authenticated npm publishing.
+- A real-model TUI journey covering local work, reviewed text and file collaboration, and a return to local work in one session.

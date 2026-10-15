@@ -1,0 +1,117 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the selected version tag to npm
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+      channel: ${{ steps.release.outputs.channel }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - run: bun install --frozen-lockfile
+      - name: Check version and release source
+        id: release
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
+        run: |
+          if [ "$PUBLISH" = true ]; then
+            test "$REF_TYPE" = tag
+            git merge-base --is-ancestor HEAD origin/main
+          fi
+          if [ "$REF_TYPE" = tag ]; then
+            bun scripts/release.ts "$REF_NAME"
+          else
+            bun scripts/release.ts
+          fi
+  verify:
+    needs: metadata
+    uses: ./.github/workflows/verify.yml
+  dry-run:
+    needs: [metadata, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-package
+          path: release
+      - name: Rehearse publishing the tested bytes
+        env:
+          CHANNEL: ${{ needs.metadata.outputs.channel }}
+        run: |
+          cd release
+          sha256sum --check ./*.sha256
+          npm publish ./*.tgz --dry-run --ignore-scripts --access public --tag "$CHANNEL" --registry=https://registry.npmjs.org
+  publish:
+    if: github.event_name == 'push' || inputs.publish
+    needs: [metadata, dry-run]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@12.2.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-package
+          path: release
+      - name: Publish verified artifact
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          CHANNEL: ${{ needs.metadata.outputs.channel }}
+        run: |
+          cd release
+          sha256sum --check ./*.sha256
+          npm publish ./*.tgz --ignore-scripts --access public --tag "$CHANNEL" --registry=https://registry.npmjs.org
+  github-release:
+    needs: [metadata, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-package
+          path: release
+      - name: Attach the published package and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.metadata.outputs.tag }}
+          CHANNEL: ${{ needs.metadata.outputs.channel }}
+        run: |
+          args=()
+          if [ "$CHANNEL" = next ]; then args+=(--prerelease); fi
+          gh release create "$TAG" release/*.tgz release/*.sha256 --verify-tag --generate-notes "${args[@]}"

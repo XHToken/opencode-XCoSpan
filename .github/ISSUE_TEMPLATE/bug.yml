@@ -1,0 +1,22 @@
+name: Bug report
+description: Report a reproducible problem with installation or collaboration.
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OpenCode and plugin versions, operating system, installation method, and model/provider names. Exclude credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use synthetic materials. Include expected and actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Relevant errors
+      description: Redact private content, tokens, local paths, and personal details before sharing.

@@ -1,0 +1,6 @@
+# Release and verification changes require maintainer attention.
+/.github/ @OLDyade
+/package.json @OLDyade
+/bun.lock @OLDyade
+/scripts/ @OLDyade
+/SECURITY.md @OLDyade

@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose a user workflow or improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the task and where the current experience falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Explain how you would know the improvement works.
+    validations:
+      required: true
