@@ -21,10 +21,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-2025]
         node: [22, 24]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,6 +45,14 @@ jobs:
       - name: Install macOS OCR data
         if: runner.os == 'macOS'
         run: brew install tesseract
+      - name: Install Windows OCR data
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $data = Join-Path $env:RUNNER_TEMP "tessdata"
+          New-Item -ItemType Directory -Force $data | Out-Null
+          Invoke-WebRequest "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/eng.traineddata" -OutFile (Join-Path $data "eng.traineddata")
+          "TESSDATA_PREFIX=$data" >> $env:GITHUB_ENV
       - run: bun run check
       - name: Install supported host
         run: npm install --global --allow-scripts=@opencode/cli "@opencode/cli@$(bun -p 'require("./package.json").dependencies["@opencode/plugin"]')"

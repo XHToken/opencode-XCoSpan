@@ -4,6 +4,7 @@ import { join, resolve } from "node:path"
 import { OpenCode } from "@opencode/client"
 import { XCoSpan } from "../../src/rpc"
 import { Task } from "../../src/types"
+import { stopHostProcess } from "../fixtures/process"
 import { terminal } from "../integration/terminal"
 import { liveModels } from "./config"
 import { command, packageRegistry } from "../fixtures/registry"
@@ -227,8 +228,7 @@ async function startHost(port = 0) {
 
 async function stopHost() {
   if (!host) return
-  if (host.exitCode === null && host.signalCode === null) process.kill(-host.pid, "SIGTERM")
-  await host.exited
+  await stopHostProcess(host)
 }
 
 afterAll(async () => {
@@ -562,8 +562,7 @@ test("real models consume a recovered cloud result after host restart", async ()
     const cloudCount = records.filter((item) => item.role === "cloud").length
     const port = Number(new URL(hostURL).port)
     await writeFile(join(artifactRoot, "host-before-crash.log"), logs)
-    process.kill(-host.pid, "SIGKILL")
-    await host.exited
+    await stopHostProcess(host, "SIGKILL")
     releaseDelivery!()
     deliveryGate = undefined
     const resumeStart = records.length

@@ -19,6 +19,7 @@ test("source setup preserves existing JSONC, permissions and plugin options on r
       '// account settings\n{"plugins":[/* keep */{"package":"other","options":{"enabled":false}}],"model":"provider/model"}',
       { mode: 0o600 },
     )
+    const originalMode = (await stat(path)).mode
     expect(await registerSource(source, config)).toBe(path)
     const installed = await readFile(path, "utf8")
     expect(installed).toContain("/* keep */")
@@ -28,7 +29,7 @@ test("source setup preserves existing JSONC, permissions and plugin options on r
     expect(parseSettings(installed).plugins).toHaveLength(2)
     await registerSource(source, config)
     expect(await readFile(path, "utf8")).toBe(installed)
-    expect((await stat(path)).mode & 0o777).toBe(0o600)
+    expect((await stat(path)).mode).toBe(originalMode)
     await writeFile(path, '{"plugins":')
     await expect(registerSource(source, config)).rejects.toThrow("not valid JSON")
     expect(await readFile(path, "utf8")).toBe('{"plugins":')

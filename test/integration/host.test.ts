@@ -6,6 +6,7 @@ import { OpenCode } from "@opencode/client"
 import { XCoSpan } from "../../src/rpc"
 import { Task } from "../../src/types"
 import { parseSettings } from "../../src/settings"
+import { stopHostProcess } from "../fixtures/process"
 import { terminal } from "./terminal"
 import { quadrantPng, solidPng } from "../fixtures/png"
 import { BoundaryProbe } from "../fixtures/boundary-probe/rpc"
@@ -506,15 +507,13 @@ async function startHost(port = 0) {
 async function restartHost() {
   const port = Number(new URL(hostURL).port)
   // Signal the isolated group so launchers and their native host receive the same crash.
-  process.kill(-host.pid, "SIGKILL")
-  await host.exited
+  await stopHostProcess(host, "SIGKILL")
   await startHost(port)
 }
 
 afterAll(async () => {
   if (host) {
-    if (host.exitCode === null && host.signalCode === null) process.kill(-host.pid, "SIGTERM")
-    await host.exited
+    await stopHostProcess(host)
   }
   server?.stop(true)
   if (root) await rm(root, { recursive: true, force: true })
