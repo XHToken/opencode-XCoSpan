@@ -3999,6 +3999,11 @@ test("native session navigation shows only the selected session's pending review
     await client.session.wait({ sessionID: second.id })
     expect((await rpc.list({ sessionID: second.id }, { location })).runs).toHaveLength(0)
   } catch (error) {
+    console.log(
+      "Navigation host diagnostics",
+      { exitCode: host.exitCode, signalCode: host.signalCode },
+      logs.slice(-16000),
+    )
     console.log(tui.screen())
     console.log(await rpc.list({ sessionID: second.id }, { location }))
     throw error
