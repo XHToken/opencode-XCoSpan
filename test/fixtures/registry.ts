@@ -30,10 +30,9 @@ export async function packageRegistry(directory: string) {
           ),
         ).map((item) => (item as { filename: string }).filename)[0]!,
       )
-  const manifest = JSON.parse(
-    await command(["tar", "-xOf", artifact, "package/package.json"], process.env, root),
-  )
   const bytes = await Bun.file(artifact).bytes()
+  const contents = await new Bun.Archive(bytes).files("package/package.json")
+  const manifest = JSON.parse(await contents.get("package/package.json")!.text())
   const integrity = "sha512-" + createHash("sha512").update(bytes).digest("base64")
   let downloads = 0
   const server = Bun.serve({

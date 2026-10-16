@@ -22,6 +22,8 @@ Requires an existing **OpenCode 2.0.27** installation. XCoSpan reuses your OpenC
 
 ![Getting started: install with OpenCode's plugin command, configure two model roles through /xcospan, then send a task. Native commands provide review, progress, cancellation, recovery, and lifecycle controls.](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/assets/readme/03-get-started.png)
 
+Windows users can follow these commands in PowerShell. See [platform and provider compatibility](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/COMPATIBILITY.md) for native Windows, material extraction, and credential setup.
+
 **1. Install the plugin**
 
 Run in your terminal:

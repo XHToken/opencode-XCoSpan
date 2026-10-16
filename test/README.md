@@ -11,7 +11,7 @@
 
 Use `OPENCODE_BIN` to select the host executable. Integration tests isolate configuration, data and sessions in temporary directories; fixture providers run on loopback. Set `XCOSPAN_PUBLIC_WEB_TEST=1` to enable tests that contact public HTTP services.
 
-The default `bun run test` runs only unit tests. Live tests incur provider usage and run only when explicitly invoked. CI runs unit tests and installed-package integration on Linux and macOS with Node.js 22 and 24, without live credentials. Both npm and Bun installations exercise exports and native material extraction. Host/TUI integration runs against the npm-installed artifact. Workflow syntax is validated with actionlint and ShellCheck.
+The default `bun run test` runs only unit tests. Live tests incur provider usage and run only when explicitly invoked. CI runs unit tests and installed-package integration on Linux, macOS, and native Windows x64 with Node.js 22 and 24, without live credentials. Both npm and Bun installations exercise exports and native material extraction. Host/TUI integration runs against the npm-installed artifact. Workflow syntax is validated with actionlint and ShellCheck.
 
 Use `bun run test:package --output dist/release` to retain a verified tarball and SHA-256 checksum. Use `--artifact /absolute/path/to/package.tgz` to test an existing artifact, including one downloaded from npm. See [Releasing](../docs/RELEASING.md) for the GitHub release rehearsal.
 
@@ -34,6 +34,13 @@ The test host exposes the selected models under the isolated role names `local` 
 XCOSPAN_LIVE_CONFIG=/absolute/path/to/live-models.json bun run test:live
 XCOSPAN_LIVE_CONFIG=/absolute/path/to/live-models.json bun run test:live --test-name-pattern "real quick start"
 XCOSPAN_LIVE_CONFIG=/absolute/path/to/live-models.json bun run test:live --test-name-pattern "real sidebar"
+```
+
+In PowerShell, set the variable before running the same command:
+
+```powershell
+$env:XCOSPAN_LIVE_CONFIG = "C:\private\live-models.json"
+bun run test:live --test-name-pattern "real quick start"
 ```
 
 `XCOSPAN_PACKAGE` can point to an installed package directory to validate that artifact. Without it, live tests use the checkout. Configuration errors fail before starting the host.

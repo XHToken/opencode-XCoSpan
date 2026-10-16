@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Native Windows package verification with Node.js 22 and 24, OCR data, and ConPTY terminal tests.
+- Portable process-tree cleanup, consistent text line endings, and special-character workspace coverage.
+- Native environment and account credential tests, plus platform and provider compatibility guidance.
+
 ## 0.1.0 — 2026-10-15
 
 - Per-request local/cloud routing with configurable model roles.

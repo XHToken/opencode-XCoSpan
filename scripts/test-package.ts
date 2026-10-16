@@ -32,7 +32,8 @@ try {
   const checksum = createHash("sha256").update(bytes).digest("hex")
   if (input && !Buffer.from(bytes).equals(Buffer.from(await Bun.file(input).bytes())))
     throw new Error("Artifact changed while preparing installation")
-  const manifest = JSON.parse(await run(["tar", "-xOf", tarball, "package/package.json"], root, true))
+  const contents = await new Bun.Archive(bytes).files()
+  const manifest = JSON.parse(await contents.get("package/package.json")!.text())
   const files = new Set(artifact.files.map((file) => file.path))
   const required = [
     ...Object.values(manifest.exports as Record<string, string>).map((path) => path.replace(/^\.\//, "")),
@@ -51,7 +52,7 @@ try {
     /^(src\/[^/]+\.ts|dist\/tui\.js|skills\/materials\/(SKILL\.md|extract\.ts)|server\.ts|tui\.tsx|rpc\.ts|package\.json|README\.md|CONTRIBUTING\.md|test\/README\.md|docs\/[^/]+\.md|docs\/assets\/readme\/[^/]+\.png|CHANGELOG\.md|SECURITY\.md|LICENSE)$/
   for (const path of files)
     if (!runtime.test(path)) throw new Error("Unexpected file included in package: " + path)
-  const readme = await run(["tar", "-xOf", tarball, "package/README.md"], root, true)
+  const readme = await contents.get("package/README.md")!.text()
   const cdn = "https://cdn.jsdelivr.net/npm/" + manifest.name + "@" + manifest.version + "/"
   for (const [, target] of readme.matchAll(/\]\((https:\/\/cdn\.jsdelivr\.net\/npm\/[^)]+)\)/g)) {
     if (!target!.startsWith(cdn)) throw new Error("Documentation version does not match package: " + target)

@@ -1,0 +1,51 @@
+# Compatibility
+
+## Host and operating systems
+
+XCoSpan targets OpenCode 2.0.27. The package verification workflow runs Node.js 22 and 24 on Linux, macOS, and native Windows x64 (Windows Server 2025). It installs the actual tarball with npm and Bun, loads it into OpenCode, and exercises native terminal setup, review, cancellation, recovery, and removal. Test workspaces and materials include spaces, non-ASCII characters, and URL-reserved characters.
+
+The bundled material helper uses Bun 1.4.3 and Xberg 1.3.10. Xberg distributes a native Windows x64 binary. Native Windows ARM64 extraction is not covered by that dependency's published platform packages or this test matrix.
+
+### Windows quick start
+
+Use Windows Terminal with PowerShell. The [Quick start](../README.md#quick-start) commands are the same on Windows:
+
+```powershell
+opencode plugin add @iflytekopensource/opencode-xcospan
+opencode
+```
+
+Enter `/xcospan` to choose accounts and models, test the connection, and start. Keep Bun on the PATH inherited by OpenCode when using the material helper. Install Bun using its [official Windows instructions](https://bun.com/docs/installation), then reopen the terminal and OpenCode.
+
+Quote file paths containing spaces. The helper accepts native drive paths and resolves them through the operating system. It keeps the original file unchanged.
+
+For OCR, install the required language files from [Tesseract's data repository](https://github.com/tesseract-ocr/tessdata_fast), and set `TESSDATA_PREFIX` to the directory containing those files before starting OpenCode. For example, if English data is already installed there:
+
+```powershell
+$env:TESSDATA_PREFIX = "C:\Tools\tessdata"
+opencode
+```
+
+Model credentials supplied through environment variables must also reach the OpenCode service process. Account connections through `/connect` use OpenCode's credential store.
+
+### Terminal behavior
+
+Automated Windows tests use Bun's native ConPTY support. XCoSpan review controls have keyboard shortcuts, including editing, saving, approval, cancellation, and image navigation. Bun documents mouse-tracking limitations on older Windows ConPTY versions; see [platform differences](https://bun.com/docs/runtime/child-process#platform-differences). Windows 11 with Windows Terminal is recommended for interactive use.
+
+## Provider protocols and authentication
+
+The local and cloud roles are independent OpenCode model references. Protocol and authentication handling belongs to the selected native provider package.
+
+| API              | Custom provider selection | Native package                             |
+| ---------------- | ------------------------- | ------------------------------------------ |
+| Chat Completions | OpenAI Chat Completions   | `@opencode/ai/providers/openai-compatible` |
+| Responses        | OpenAI Responses          | `@opencode/ai/providers/openai`            |
+| Messages         | Anthropic Messages        | `@opencode/ai/providers/anthropic`         |
+
+Use the endpoint's base address, excluding `/chat/completions` or `/responses`. Use the provider's published model limits. The connection test invokes a tool and reads its result through the actual host.
+
+Native integration tests verify explicit provider credentials, environment credentials, and account-store credentials. They also verify authentication failure and correction. Provider-specific OAuth refresh, command credentials, WebSocket transports, and every model vendor require their own validation; an API-key test does not establish coverage for them.
+
+Live runs accept arbitrary provider definitions through the [live configuration](../test/README.md#live-model-configuration). Run the same journey for each protocol and role pairing to verify routing, redaction, user review, real delegation, and return to local execution. A successful HTTP status alone is insufficient: Responses streams can report `response.failed` after an HTTP 200.
+
+Do not force tool selection when the provider disallows it in the selected reasoning mode. OpenCode's model loop normally lets the model choose tools; provider errors remain visible to the user.
