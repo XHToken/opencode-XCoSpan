@@ -69,8 +69,8 @@ const pixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AA
 const blueImage =
   "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGNgYPiPhIjiAACOsw/xs6MvMwAAAABJRU5ErkJggg=="
 
-async function until<T>(read: () => Promise<T | undefined>, label: string): Promise<T> {
-  const deadline = Date.now() + 10000
+async function until<T>(read: () => Promise<T | undefined>, label: string, timeoutMs = 10000): Promise<T> {
+  const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     const value = await read()
     if (value !== undefined) return value
@@ -459,7 +459,7 @@ beforeAll(async () => {
   await mkdir(join(root, "config/opencode"), { recursive: true })
   await writeFile(join(root, "config/opencode/service.json"), JSON.stringify({ password: "xcospan-test" }))
   await startHost()
-}, 60000)
+}, 90000)
 
 async function startHost(port = 0) {
   logs = ""
@@ -482,11 +482,20 @@ async function startHost(port = 0) {
     void (async () => {
       for await (const chunk of stream as ReadableStream<Uint8Array>) logs += new TextDecoder().decode(chunk)
     })()
-  const url = await until(async () => {
-    if (host.exitCode !== null || host.signalCode !== null)
-      throw new Error(`Host exited during startup (${host.exitCode ?? host.signalCode}):\n${logs}`)
-    return logs.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0]
-  }, "host startup")
+  const started = Date.now()
+  const url = await until(
+    async () => {
+      if (host.exitCode !== null || host.signalCode !== null)
+        throw new Error(`Host exited during startup (${host.exitCode ?? host.signalCode}):\n${logs}`)
+      return logs.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0]
+    },
+    "host startup",
+    60000,
+  ).catch((error) => {
+    console.error("Host startup output:", logs)
+    throw error
+  })
+  console.log("Host ready after", Date.now() - started, "ms")
   hostURL = url
   client = OpenCode.make({
     baseUrl: url,

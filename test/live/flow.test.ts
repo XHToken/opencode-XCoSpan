@@ -11,7 +11,7 @@ import { command, packageRegistry } from "../fixtures/registry"
 import { parseSettings } from "../../src/settings"
 
 // These tests incur real provider usage and send only synthetic test materials.
-const records: { role: "local" | "cloud"; body: unknown }[] = []
+const records: { role: "local" | "cloud"; endpoint: string; body: unknown }[] = []
 let directory: string
 let host: ReturnType<typeof Bun.spawn>
 let proxy: ReturnType<typeof Bun.serve>
@@ -75,29 +75,29 @@ beforeAll(async () => {
           : undefined
       if (!role) return new Response("Unknown role", { status: 404 })
       const body = await request.text()
-      const requestID = records.push({ role, body: JSON.parse(body) })
+      const payload = JSON.parse(body)
+      const endpoint = pathname.slice(role.length + 1)
+      const requestID = records.push({ role, endpoint, body: payload })
       await writeFile(join(artifactRoot, "requests.json"), JSON.stringify(records, null, 2))
       console.log(
         "Model request",
         role,
-        JSON.parse(body).model,
-        "messages",
-        JSON.parse(body).messages?.length,
+        endpoint,
+        payload.model,
+        "input length",
+        payload.messages?.length ?? payload.input?.length ?? 0,
         "tools",
-        JSON.parse(body).tools?.length ?? 0,
+        payload.tools?.length ?? 0,
       )
       const headers = new Headers(request.headers)
       headers.delete("host")
       headers.delete("content-length")
-      const response = await fetch(
-        models[role].baseURL + pathname.slice(role.length + 1) + new URL(request.url).search,
-        {
-          method: "POST",
-          headers,
-          body,
-          signal: request.signal,
-        },
-      )
+      const response = await fetch(models[role].baseURL + endpoint + new URL(request.url).search, {
+        method: "POST",
+        headers,
+        body,
+        signal: request.signal,
+      })
       if (!response.ok) console.error("Provider HTTP error", role, response.status)
       const writer = Bun.file(join(artifactRoot, `response-${requestID}-${role}.sse`)).writer()
       const stream = response.body?.pipeThrough(
