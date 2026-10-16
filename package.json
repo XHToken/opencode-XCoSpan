@@ -86,14 +86,14 @@
   "devDependencies": {
     "@modelcontextprotocol/server-filesystem": "1.0.0",
     "@opencode/client": "2.0.27",
-    "@opentui/core": "0.5.17",
-    "@opentui/solid": "0.5.17",
+    "@opentui/core": "0.6.2",
+    "@opentui/solid": "0.6.2",
     "@types/bun": "latest",
     "@types/node": "^24.0.0",
-    "@types/semver": "7.7.1",
+    "@types/semver": "7.8.0",
     "@xterm/headless": "^6.0.0",
     "prettier": "^3.6.0",
-    "semver": "7.7.4",
+    "semver": "7.8.5",
     "solid-js": "1.9.12",
     "typescript": "^5.9.0"
   },
