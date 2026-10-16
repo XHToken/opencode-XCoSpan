@@ -22,7 +22,7 @@ Version tag on main
   -> GitHub release with the published tarball and checksum
 ```
 
-Build and host versions come from `package.json`. Actions are pinned to commit SHAs and updated through Dependabot. Runtime package tests install from the tarball in temporary consumer directories. Publish jobs use the verified tarball and checksum produced by the verification job.
+Build and host versions come from `package.json`. Actions are pinned to commit SHAs. Runtime package tests install from the tarball in temporary consumer directories. Publish jobs use the verified tarball and checksum produced by the verification job.
 
 ## Validate a release
 
@@ -88,7 +88,7 @@ Remove only the test version with `npm unpublish <name>@<test-version>`. Verify 
 
 - **Live models:** explicit manual run with the `live-tests` environment's `XCOSPAN_LIVE_CONFIG` secret. Supply the JSON schema in [Testing](../test/README.md), with credentials resolved in provider settings. The runner deletes configuration and request diagnostics after the run. Paid model tests never run for pull requests.
 - **Dependency audit:** every verification run, plus weekly and manually triggered `bun audit`.
-- **Dependabot:** weekly Bun lockfile and GitHub Actions updates. OpenCode and OpenTUI packages are grouped for coordinated review; updates still run the complete checks.
+- **Dependabot:** automatic version-update pull requests are paused for Bun and GitHub Actions (`open-pull-requests-limit: 0`). Security-update settings remain unchanged. Maintainers review dependency upgrades alongside the verification checks.
 
 ## References
 
