@@ -5,7 +5,7 @@ body:
     id: problem
     attributes:
       label: User problem
-      description: Describe the task and where the current experience falls short.
+      description: Describe the task, the required capability, and its intended use.
     validations:
       required: true
   - type: textarea

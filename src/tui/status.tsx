@@ -479,7 +479,7 @@ export function CollaborationPanel(props: { panel: PanelInput }) {
           )}
         </For>
         <text fg={ctx.theme.text.muted}>
-          Usage reflects recorded calls. Routing and redaction usage is currently unavailable.
+          Totals cover recorded task calls. Routing and redaction usage is excluded.
           {"\n"}/xcospan-review Review · /xcospan-cancel Cancel cloud task · /xcospan-recover Recover results
           {"\n"}Esc close
         </text>

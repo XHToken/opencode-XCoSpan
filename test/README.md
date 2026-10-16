@@ -13,7 +13,7 @@ Use `OPENCODE_BIN` to select the host executable. Integration tests isolate conf
 
 The default `bun run test` runs only unit tests. Live tests incur provider usage and run only when explicitly invoked. CI runs unit tests and installed-package integration on Linux, macOS, and native Windows x64 with Node.js 22 and 24, without live credentials. Both npm and Bun installations exercise exports and native material extraction. Host/TUI integration runs against the npm-installed artifact. Workflow syntax is validated with actionlint and ShellCheck.
 
-Use `bun run test:package --output dist/release` to retain a verified tarball and SHA-256 checksum. Use `--artifact /absolute/path/to/package.tgz` to test an existing artifact, including one downloaded from npm. See [Releasing](../docs/RELEASING.md) for the GitHub release rehearsal.
+Use `bun run test:package --output dist/release` to retain a verified tarball and SHA-256 checksum. Use `--artifact /absolute/path/to/package.tgz` to test an existing artifact, including one downloaded from npm. See [Releasing](../docs/RELEASING.md) for workflow-based release validation.
 
 ## Live model configuration
 
@@ -51,7 +51,7 @@ The quick-start journey runs the same `opencode plugin add` command as the READM
 
 The registry fixture serves package metadata and the exact tarball bytes; dependencies come from npm. `XCOSPAN_TARBALL` selects an existing artifact, and `test:package` passes its verified artifact automatically. Native installation coverage includes repeat installation, configuration preservation, update checks, updates, and removal. This fixture validates native installation behavior; public registry availability and publish authentication require a real publication.
 
-After publication, run the same journey against the public package by setting `XCOSPAN_INSTALL_SPEC`:
+To test installation from npm, set `XCOSPAN_INSTALL_SPEC` to a published package version or dist-tag:
 
 ```sh
 XCOSPAN_INSTALL_SPEC=@iflytekopensource/opencode-xcospan \

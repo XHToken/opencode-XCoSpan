@@ -53,7 +53,7 @@ export class Delegations {
         continue
       }
       run.status = "unknown"
-      run.error = "Execution connection ended; inspect the existing child before recovery"
+      run.error = "Connection lost. Use /xcospan-recover to check the cloud task and retrieve its result."
       await this.save(run)
     }
   }
@@ -274,7 +274,7 @@ export class Delegations {
       return run
     }
     if (original?.type === "tool" && original.state.status === "running" && !restoring)
-      throw new ActionError("The original delegation tool is still running")
+      throw new ActionError("Cloud collaboration is running. Wait for completion or use /xcospan-cancel.")
     try {
       await this.ctx.session.wait({ sessionID: run.childID })
     } catch (error) {

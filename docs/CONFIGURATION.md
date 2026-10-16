@@ -70,13 +70,13 @@ Both service URLs must use loopback addresses; redirects are rejected. Errors su
 
 ## Built-in algorithm policy
 
-Routing evaluates the complete deliverable, the hardest necessary cognitive step, and a grounded verification path against the configured model and actual host capabilities. It handles the current query in its session context. Model identity, file format, domain, and task length do not impose fixed routes. Invalid JSON or an invalid decision stops the request.
+Routing evaluates the current query and session context against the configured model and available tools. The decision considers the complete deliverable, required reasoning, and a verification path. Model identity, file format, domain, and task length are assessed within those requirements. Invalid JSON or an invalid decision stops the request.
 
 Text redaction covers direct and indirect identifiers, credentials, business entities, financial and contractual data, and identifying combinations. This policy includes contract amounts, payment percentages, and liability percentages. Every candidate is shown against its original; users can edit the candidate to retain facts needed for the delegated task. The local agent uses the reviewed version when preparing the final outbound task.
 
-The English prompts adapt the supplied routing procedure and the sensitive-data categories and policy from Privacy Gateway's `string_only` revision `6256c66fb869b40959d75cbfa29a3d4864294228`. The built-in implementation returns a complete text candidate through OpenCode's configured model provider. Privacy Gateway's Python runtime, regex and dictionary detectors, span-offset output, and replacement-map engine are outside this implementation. Its Python entry point requires an adapter to implement the optional HTTP service contract above.
+Built-in text redaction sends the input to the configured local-role model and returns a complete text candidate. The sensitive-data categories follow Privacy Gateway's `string_only` policy at revision `6256c66fb869b40959d75cbfa29a3d4864294228`. External redaction engines integrate through the HTTP service contract above.
 
-Prompt-based redaction remains model-generated and requires user review. Structural preservation, consistent placeholders, and complete coverage are instructions to the model, not deterministic guarantees. The original and reviewed candidate remain available in plugin storage for comparison. Material review and complete outbound approval are enforced by the plugin.
+Users review each model-generated candidate for sensitive-data coverage, document structure, and placeholder consistency. The original and approved candidate remain in plugin storage for comparison. The plugin requires material review and approval of the complete outbound task before cloud execution.
 
 ## Review and outbound content
 

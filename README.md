@@ -1,6 +1,6 @@
 # opencode-XCoSpan
 
-**Local work. Cloud capability. Your control.**
+**Local execution and reviewed cloud collaboration for OpenCode.**
 
 [![npm](https://img.shields.io/npm/v/@iflytekopensource/opencode-xcospan)](https://www.npmjs.com/package/@iflytekopensource/opencode-xcospan)
 [![OpenCode](https://img.shields.io/badge/OpenCode-2.0.27-202124)](https://opencode.ai)
@@ -8,7 +8,7 @@
 
 ![Collaboration flow: each new request is routed, the local model plans the work, and local execution or approved cloud collaboration returns to local verification and delivery.](docs/assets/readme/01-overview.png)
 
-An OpenCode V2 plugin for reviewed cloud collaboration. The local model organizes the task, uses tools and Skills, and selects relevant materials. The plugin connects routing, redaction, human review, delegation, and result delivery.
+XCoSpan connects routing, redaction, user review, cloud collaboration, and result delivery in OpenCode V2. The local model plans the task, uses tools and Skills, and selects relevant materials. Cloud tasks run after the user approves their outbound content.
 
 | Collaborate on demand                                    | Review what leaves                                             | Follow actual progress                                             |
 | -------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -18,9 +18,7 @@ An OpenCode V2 plugin for reviewed cloud collaboration. The local model organize
 
 ## Quick start
 
-The first npm release is in preparation. The registry commands below apply once the package is published. Contributors can use the [source setup](CONTRIBUTING.md#source-setup) now.
-
-Requires an existing **OpenCode 2.0.27** installation. XCoSpan reuses your OpenCode provider accounts and model catalog. The bundled file-extraction helper uses **Bun 1.4.3** on your PATH; install it through the [Bun installation guide](https://bun.sh/docs/installation) when using that helper.
+Requires an existing **OpenCode 2.0.27** installation. XCoSpan uses your OpenCode provider accounts and model catalog. The bundled file-extraction helper uses **Bun 1.4.3** on your PATH; install it through the [Bun installation guide](https://bun.sh/docs/installation) when using that helper.
 
 ![Getting started: install with OpenCode's plugin command, configure two model roles through /xcospan, then send a task. Native commands provide review, progress, cancellation, recovery, and lifecycle controls.](docs/assets/readme/03-get-started.png)
 
@@ -57,7 +55,7 @@ Configure models
   → Confirm model roles and choose the default for new sessions
 ```
 
-Reuse accounts and models configured in OpenCode. To add an account, select **Connect an account /connect**, finish connecting, then return to `/xcospan`. Use **Add a local or custom provider** for your own endpoint. Both roles require tool calling and may use the same model. Connection tests make real provider requests.
+Reuse accounts and models configured in OpenCode. To add an account, select **Connect an account /connect**, finish connecting, then return to `/xcospan`. Use **Add a local or custom provider** for your own endpoint. Both roles require tool calling and may use the same model. Connection tests send requests to the selected providers and incur usage.
 
 Send your task normally once XCoSpan starts. Review each redaction and the complete outbound task when prompted. For later sessions, open `/xcospan` and select **Start**, or choose **Use XCoSpan by default** during setup.
 
@@ -69,7 +67,7 @@ Send your task normally once XCoSpan starts. Review each redaction and the compl
 
 **After every redaction**, inspect the original and candidate side by side. **Before cloud execution**, review the complete outbound task. Both reviews support editing, approval, and cancellation. Edits create a new revision; approval applies to that revision. Cancelling a review stops the current task, including concurrent pending reviews. Send a new request when you want to continue.
 
-The sidebar follows real execution, showing operations, targets, recent output, and elapsed time. Use `/xcospan-status` in a narrow terminal. Missing usage or pricing is shown as unknown.
+The sidebar displays operations, targets, recent output, and elapsed time from execution events. Use `/xcospan-status` in a narrow terminal. Missing usage or pricing is shown as unknown. Routing and redaction usage is excluded from the displayed totals.
 
 | Command            | Purpose                                                                                 |
 | ------------------ | --------------------------------------------------------------------------------------- |
@@ -121,6 +119,6 @@ Use the exact configured package specifier if you installed a version or tag. Th
 | [Testing](test/README.md)              | Unit, native host, and real-model validation                  |
 | [Security](SECURITY.md)                | Data access and deployment boundaries                         |
 
-Package documentation and diagrams are included in every npm release. Repository access is managed by XHToken; members with access can report issues and propose changes in [GitHub](https://github.com/XHToken/opencode-XCoSpan).
+The npm package includes documentation and diagrams. Report issues and propose changes on [GitHub](https://github.com/XHToken/opencode-XCoSpan).
 
 [MIT License](LICENSE)

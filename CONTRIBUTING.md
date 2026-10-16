@@ -18,7 +18,7 @@ Rebuild with `bun run build` after editing TUI code. OpenTUI and Solid remain ex
 
 ## Source setup
 
-Repository access currently requires GitHub authorization. To load a development checkout into an existing OpenCode installation:
+To load a source checkout into OpenCode:
 
 ```sh
 git clone https://github.com/XHToken/opencode-XCoSpan.git
@@ -46,6 +46,7 @@ Keep private documents, credentials, personal configuration, request logs and in
 
 ## Changes
 
+- Write documentation, UI text, and model guidance in English. Describe capabilities, prerequisites, actions, outcomes, and relevant limitations directly. Keep wording factual and scoped to the reader's task.
 - Trace callers, exports, tests and documentation before changing a contract.
 - Add behavioral coverage for approval versions, cancellation, context filtering and delivery.
 - Check APIs against the supported upstream version. Explain breaking changes directly.
@@ -58,6 +59,6 @@ Follow [Releasing](docs/RELEASING.md) for dry runs, npm account setup, version t
 
 The `files` allowlist defines the artifact; exported entrypoints and Skill resources are checked against the packed files. The package retains service-side TypeScript supported by OpenCode and includes compiled TUI JavaScript. Update the changelog alongside public behavior or contract changes.
 
-Keep the PR description focused on the problem, resulting behavior and verification. Avoid adding release frameworks, generated reports or dependencies without a concrete need.
+Keep the PR description focused on the problem, resulting behavior and verification. Keep dependencies and tooling scoped to the change.
 
 Contributions are provided under the repository's MIT license. Include attribution and license notices required by third-party code or assets.

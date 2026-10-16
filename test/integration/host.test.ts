@@ -4472,7 +4472,7 @@ test("a completed child survives a crash before parent delivery and is recovered
     expect((await client.session.get({ sessionID: run.childID })).outcome).toBe("succeeded")
     await expect(rpc.recover({ id: run.id, sessionID: session.id }, { location })).rejects.toMatchObject({
       type: "action",
-      message: "The original delegation tool is still running",
+      message: "Cloud collaboration is running. Wait for completion or use /xcospan-cancel.",
     })
     expect(await client.session.inbox.list({ sessionID: session.id })).toHaveLength(0)
     const before = requests.filter((request) => request.model === "cloud").length

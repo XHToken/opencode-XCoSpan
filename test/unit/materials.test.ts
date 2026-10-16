@@ -69,7 +69,7 @@ test("OCR extracts a real scanned image with an explicitly selected language", a
   expect(result.results![0]!.metadata?.ocrUsed).toBe(true)
 }, 30000)
 
-test("reports empty extraction and damaged inputs instead of treating them as material", async () => {
+test("rejects empty extraction and damaged inputs", async () => {
   await expect(extractMaterial(join(fixtures, "shipping-scan.png"))).rejects.toThrow("No readable text")
   const damaged = join(directory, "damaged.pdf")
   await writeFile(damaged, "%PDF-1.7\ninvalid document")

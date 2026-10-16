@@ -6,7 +6,7 @@ XCoSpan targets OpenCode 2.0.27. The package verification workflow is configured
 
 The bundled material helper uses Bun 1.4.3 and Xberg 1.3.10. Xberg distributes a native Windows x64 binary. The published Xberg 1.3.10 packages do not include macOS Intel (x64) or Windows ARM64 binaries. The bundled extraction helper cannot run natively on those architectures. Use an available local extraction tool through the model's tools and Skills.
 
-A configured CI target establishes the intended test matrix. Check the latest successful run for validation of a specific commit; local macOS results do not establish Windows or Linux coverage.
+Per-platform validation results are recorded in the verification workflow artifacts for each commit.
 
 ### Windows quick start
 
@@ -46,8 +46,8 @@ The local and cloud roles are independent OpenCode model references. Protocol an
 
 Use the endpoint's base address, excluding `/chat/completions` or `/responses`. Use the provider's published model limits. The connection test invokes a tool and reads its result through the actual host.
 
-Native integration tests verify explicit provider credentials, environment credentials, and account-store credentials. They also verify authentication failure and correction. Provider-specific OAuth refresh, command credentials, WebSocket transports, and every model vendor require their own validation; an API-key test does not establish coverage for them.
+Native integration tests verify explicit provider credentials, environment credentials, and account-store credentials. They also verify authentication failure and correction. Provider-specific OAuth refresh, command credentials, WebSocket transports, and individual model services require dedicated validation.
 
-Live runs accept arbitrary provider definitions through the [live configuration](../test/README.md#live-model-configuration). Run the same journey for each protocol and role pairing to verify routing, redaction, user review, real delegation, and return to local execution. A successful HTTP status alone is insufficient: Responses streams can report `response.failed` after an HTTP 200.
+Live runs accept arbitrary provider definitions through the [live configuration](../test/README.md#live-model-configuration). Run the same journey for each protocol and role pairing to verify routing, redaction, user review, real delegation, and return to local execution. Validation checks the completed response stream, including `response.failed` events that can follow HTTP 200.
 
-Do not force tool selection when the provider disallows it in the selected reasoning mode. OpenCode's model loop normally lets the model choose tools; provider errors remain visible to the user.
+Tool selection follows the provider's requirements for the selected reasoning mode. OpenCode's model loop lets the model choose tools, and provider errors are displayed to the user.

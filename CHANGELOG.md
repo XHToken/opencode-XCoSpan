@@ -2,26 +2,28 @@
 
 ## Unreleased
 
-- User cancellation stops the native task and concurrent reviews; subsequent requests start normally.
+### Collaboration
 
-- Session deletion removes associated private review and run records, including deletions made while the plugin was unloaded.
-- Recovery reports a deleted collaboration session explicitly.
-- Commit-history secret scanning and dependency audits run with pull-request verification.
-- Package documentation uses validated relative links and documents extraction architecture limits.
-
-- English algorithm prompts for capability-based binary routing and comprehensive text redaction, integrated with native model calls and both review stages.
-- Strict `{ reason, route: 0 | 1 }` routing service contract with explicit session-state mapping.
-
-- Native Windows package verification with Node.js 22 and 24, OCR data, and ConPTY terminal tests.
-- Portable process-tree cleanup, consistent text line endings, and special-character workspace coverage.
-- Native environment and account credential tests, plus platform and provider compatibility guidance.
-
-## Initial feature set (unreleased)
-
-- Per-request local/cloud routing with configurable model roles.
+- Per-request local/cloud routing with configurable model roles and a strict `{ reason, route: 0 | 1 }` service contract.
+- Capability-based routing and text redaction through English model instructions.
 - Text and optional image redaction review, editable outbound approval, and version-bound delegation.
-- Native progress, cancellation, recovery, and verified result delivery.
-- Unified material extraction Skill and native OpenCode TUI model setup, review, and lifecycle controls.
-- Native `opencode plugin add` onboarding, update and removal instructions, and contributor-only source setup.
-- Cross-platform artifact testing, release rehearsal, and authenticated npm publishing.
-- A real-model TUI journey covering local work, reviewed text and file collaboration, and a return to local work in one session.
+- Progress, cancellation, recovery, and result delivery through OpenCode sessions.
+- User cancellation stops the active task and concurrent reviews; subsequent requests start normally.
+- Session deletion removes associated review and run records, including deletions made while the plugin was unloaded.
+- Recovery reports deleted collaboration sessions.
+
+### Setup and materials
+
+- `/xcospan` model configuration, connection checks, and lifecycle controls.
+- Installation, update, and removal through OpenCode plugin commands.
+- A materials Skill for task-driven extraction and source verification.
+- Package documentation and diagrams with validated relative links.
+
+### Verification
+
+- Package verification on Linux, macOS, and Windows with Node.js 22 and 24.
+- Native Windows terminal tests using ConPTY, OCR data, and special-character workspaces.
+- Provider credentials, environment credentials, and account-store authentication coverage.
+- A real-model TUI journey covering local execution, text and file collaboration, and return to local execution in one session.
+- Tarball installation, release validation, and npm publication workflows.
+- Commit-history secret scanning and dependency audits in pull-request verification.

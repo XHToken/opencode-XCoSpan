@@ -818,7 +818,7 @@ test("real models complete reviewed text collaboration", async () => {
       if (review.kind === "outbound") {
         const candidate = Task.parse(review.candidate)
         // Simulate the user reviewing all outbound fields, including model-composed text.
-        // A real run reintroduced identities here; approval must send the user's edited version.
+        // Approval sends the user's edited version of every outbound field.
         expect(records.slice(start).filter((item) => item.role === "cloud")).toHaveLength(0)
         const reviewed = state.reviews.find((item) => item.kind === "redaction" && item.status === "approved")
         if (!reviewed) throw new Error("Expected approved redaction before outbound review")

@@ -69,7 +69,7 @@ test("persisted review cannot approve an orphaned tool after restart", async () 
   await expect(restarted.approve("orphan", "parent", 1)).rejects.toThrow("no longer waiting")
 })
 
-test("notification failure cancels instead of silently waiting", async () => {
+test("notification failure cancels the pending review", async () => {
   const { store, input } = fixture()
   let calls = 0
   const reviews = new Reviews(store, async () => {

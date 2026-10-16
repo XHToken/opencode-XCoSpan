@@ -23,7 +23,7 @@ The helper supports document, presentation, spreadsheet, PDF, text, markup, emai
 ## Select the appropriate representation
 
 - **Documents and presentations:** use extracted structure for textual analysis. Inspect the rendered original when layout, embedded objects, annotations, or visual relationships affect the task.
-- **Spreadsheets:** extracted tables show stored values. Formula cells may have empty or stale cached values; extraction does not recalculate the workbook. Use a spreadsheet-capable tool for calculations and exact cell-level provenance.
+- **Spreadsheets:** extracted tables show stored values. Formula cells may have empty or stale cached values. Use a spreadsheet-capable tool to recalculate the workbook and verify exact cell-level provenance.
 - **Scans and image text:** explicitly select local OCR and the material's languages. OCR uses the engine's native Tesseract backend; the selected language data must be available locally. Repeat the option for multilingual material:
 
   ```sh
@@ -31,6 +31,6 @@ The helper supports document, presentation, spreadsheet, PDF, text, markup, emai
   ```
 
 - **Images and diagrams:** preserve the visual material when the task depends on it. OCR captures text; visual inspection establishes what the image shows. Use the available image redaction tool for image material selected for cloud collaboration. When the task requires a representation that the configured tools cannot prepare or review, report the missing capability before delegation.
-- **Audio, video, or other specialized material:** use an available local tool or Skill with that capability. This helper does not transcribe media.
+- **Audio, video, or other specialized material:** use a local tool or Skill that supports the required transcription or analysis.
 
 Keep the original file unchanged. Extraction output and metadata may contain private information. For cloud collaboration, select the necessary original text or images, complete each redaction review, then assemble the task for complete outbound approval. Source paths and extraction metadata stay local unless explicitly included in the reviewed task.
