@@ -36,12 +36,16 @@ export function terminal(args: string[], env: Record<string, string | undefined>
         const line = buffer.getLine(buffer.viewportY + y)
         for (let x = 0; x < display.cols; x++) {
           const cell = line?.getCell(x)
+          if (!cell) continue
+          const foreground = cell.getChars().trim().length > 0
+          const background = cell.getChars() !== "█"
           if (
-            cell &&
-            ((cell.isFgPalette() && cell.getFgColor() === color.palette) ||
-              (cell.isBgPalette() && cell.getBgColor() === color.palette) ||
-              (cell.isFgRGB() && cell.getFgColor() === color.rgb) ||
-              (cell.isBgRGB() && cell.getBgColor() === color.rgb))
+            (foreground &&
+              ((cell.isFgPalette() && cell.getFgColor() === color.palette) ||
+                (cell.isFgRGB() && cell.getFgColor() === color.rgb))) ||
+            (background &&
+              ((cell.isBgPalette() && cell.getBgColor() === color.palette) ||
+                (cell.isBgRGB() && cell.getBgColor() === color.rgb)))
           )
             count++
         }
