@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- User cancellation stops the native task and concurrent reviews; subsequent requests start normally.
+
+- Session deletion removes associated private review and run records, including deletions made while the plugin was unloaded.
+- Recovery reports a deleted collaboration session explicitly.
+- Commit-history secret scanning and dependency audits run with pull-request verification.
+- Package documentation uses validated relative links and documents extraction architecture limits.
+
 - English algorithm prompts for capability-based binary routing and comprehensive text redaction, integrated with native model calls and both review stages.
 - Strict `{ reason, route: 0 | 1 }` routing service contract with explicit session-state mapping.
 
@@ -9,7 +16,7 @@
 - Portable process-tree cleanup, consistent text line endings, and special-character workspace coverage.
 - Native environment and account credential tests, plus platform and provider compatibility guidance.
 
-## 0.1.0 — 2026-10-15
+## Initial feature set (unreleased)
 
 - Per-request local/cloud routing with configurable model roles.
 - Text and optional image redaction review, editable outbound approval, and version-bound delegation.

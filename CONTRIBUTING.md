@@ -12,7 +12,7 @@ bun run check
 bun run test:package
 ```
 
-`check` runs type checks, formatting checks and unit tests. `test:package` builds and inspects a tarball, installs it with npm and Bun in clean directories, exercises native extraction and exports, tests native plugin installation/update/removal against an isolated registry serving that artifact, and runs host/TUI integration against the npm installation. CI covers Linux and macOS with Node.js 22 and 24, validates workflow syntax, and retains the verified artifact with a checksum. See [test/README.md](test/README.md) for prerequisites and opt-in live tests.
+`check` runs type checks, formatting checks and unit tests. `test:package` builds and inspects a tarball, installs it with npm and Bun in clean directories, exercises native extraction and exports, tests native plugin installation/update/removal against an isolated registry serving that artifact, and runs host/TUI integration against the npm installation. The CI matrix includes Linux, macOS, and Windows with Node.js 22 and 24, validates workflow syntax, scans commit history for credentials, audits dependencies, and retains the verified artifact with a checksum. See [test/README.md](test/README.md) for prerequisites and opt-in live tests.
 
 Rebuild with `bun run build` after editing TUI code. OpenTUI and Solid remain external so the plugin uses the host's shared runtime.
 
@@ -59,3 +59,5 @@ Follow [Releasing](docs/RELEASING.md) for dry runs, npm account setup, version t
 The `files` allowlist defines the artifact; exported entrypoints and Skill resources are checked against the packed files. The package retains service-side TypeScript supported by OpenCode and includes compiled TUI JavaScript. Update the changelog alongside public behavior or contract changes.
 
 Keep the PR description focused on the problem, resulting behavior and verification. Avoid adding release frameworks, generated reports or dependencies without a concrete need.
+
+Contributions are provided under the repository's MIT license. Include attribution and license notices required by third-party code or assets.

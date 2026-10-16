@@ -3829,14 +3829,17 @@ test.each([false, true])(
             : undefined,
         "first review decision",
       )
-      await until(
-        async () => (preview().includes((second.original as { text: string }).text) ? true : undefined),
-        "second queued review",
-      )
-      expect((await rpc.get(pick(second), { location })).status).toBe("pending")
-      tui.write("\x01")
+      if (!cancel) {
+        await until(
+          async () => (preview().includes((second.original as { text: string }).text) ? true : undefined),
+          "second queued review",
+        )
+        expect((await rpc.get(pick(second), { location })).status).toBe("pending")
+        tui.write("\x01")
+      }
       await client.session.wait({ sessionID: session.id })
-      expect((await rpc.get(pick(second), { location })).status).toBe("approved")
+      expect((await rpc.get(pick(second), { location })).status).toBe(cancel ? "cancelled" : "approved")
+      if (cancel) expect((await client.session.get({ sessionID: session.id })).outcome).toBe("interrupted")
       expect((await rpc.list({ sessionID: session.id }, { location })).runs).toHaveLength(0)
       await until(
         async () => (!tui.screen().includes("Original content") ? true : undefined),
@@ -4508,3 +4511,187 @@ test("a completed child survives a crash before parent delivery and is recovered
 function pick(review: { id: string; sessionID: string }) {
   return { id: review.id, sessionID: review.sessionID }
 }
+
+for (const mode of ["active", "unloaded", "unconfigured"]) {
+  const unloaded = mode === "unloaded"
+  test(`deleted completed sessions are cleaned up when ${mode}`, async () => {
+    const session = await client.session.create({ location, agent: "xcospan" })
+    await client.session.prompt({ sessionID: session.id, text: "Research SECRET_PERSON" })
+    const rpc = client.rpc(XCoSpan)
+    for (const kind of ["redaction", "outbound"]) {
+      const review = await until(
+        async () =>
+          (await rpc.list({ sessionID: session.id }, { location })).reviews.find(
+            (item) => item.kind === kind && item.status === "pending",
+          ),
+        kind,
+      )
+      await rpc.approve({ ...pick(review), revision: review.revision }, { location })
+    }
+    await client.session.wait({ sessionID: session.id })
+    expect((await rpc.list({ sessionID: session.id }, { location })).runs[0]?.status).toBe("completed")
+    const path = join(location.directory, "opencode.json")
+    const original = await Bun.file(path).text()
+    try {
+      if (mode === "unconfigured") {
+        const config = JSON.parse(original)
+        delete config.plugins[1].options
+        await writeFile(path, JSON.stringify(config))
+        await until(
+          async () => (!(await rpc.status({}, { location })).ready ? true : undefined),
+          "plugin unconfigured",
+        )
+      }
+      if (unloaded) {
+        const config = JSON.parse(original)
+        config.plugins.splice(1, 1)
+        await writeFile(path, JSON.stringify(config))
+        await until(
+          async () =>
+            !(await client.plugin.list({ location })).data.some((plugin) => plugin.id === "xcospan")
+              ? true
+              : undefined,
+          "plugin unloaded",
+        )
+      }
+      await client.session.remove({ sessionID: session.id })
+      if (mode === "unconfigured") {
+        await until(async () => {
+          const records = await rpc.list({ sessionID: session.id }, { location })
+          return records.reviews.length === 0 && records.runs.length === 0 ? true : undefined
+        }, "records removed without model configuration")
+      }
+    } finally {
+      if (mode !== "active") await writeFile(path, original)
+    }
+    await until(async () => {
+      const plugin = (await client.plugin.list({ location })).data.find((plugin) => plugin.id === "xcospan")
+      if (!plugin || plugin.state.status !== "active") return undefined
+      const records = await client.rpc(XCoSpan).list({ sessionID: session.id }, { location })
+      return records.reviews.length === 0 && records.runs.length === 0 ? true : undefined
+    }, "deleted session records removed")
+    await restartHost()
+    const next = await client.session.create({ location, agent: "xcospan" })
+    await client.session.prompt({ sessionID: next.id, text: "LOCAL_ONLY calculate 2 + 2" })
+    await client.session.wait({ sessionID: next.id })
+    expect((await client.session.get({ sessionID: next.id })).outcome).toBe("succeeded")
+  }, 90000)
+}
+
+test("deleting a session awaiting review releases it and clears its private candidates", async () => {
+  const session = await client.session.create({ location, agent: "xcospan" })
+  await client.session.prompt({ sessionID: session.id, text: "Research SECRET_PERSON" })
+  const rpc = client.rpc(XCoSpan)
+  const review = await until(
+    async () =>
+      (await rpc.list({ sessionID: session.id }, { location })).reviews.find(
+        (item) => item.status === "pending",
+      ),
+    "pending review before deletion",
+  )
+  const before = requests.filter((request) => request.model === "cloud").length
+  await client.session.remove({ sessionID: session.id })
+  await until(
+    async () =>
+      (await rpc.list({ sessionID: session.id }, { location })).reviews.length === 0 ? true : undefined,
+    "pending review removed",
+  )
+  await expect(
+    rpc.approve({ ...pick(review), revision: review.revision }, { location }),
+  ).rejects.toMatchObject({
+    type: "action",
+    message: "Review not found",
+  })
+  expect(requests.filter((request) => request.model === "cloud")).toHaveLength(before)
+  await restartHost()
+}, 90000)
+
+for (const target of ["parent", "child"] as const) {
+  test(`deleting a running ${target} stops collaboration without resubmitting it`, async () => {
+    cloudGate = new Promise<void>((resolve) => {
+      releaseCloud = resolve
+    })
+    const session = await client.session.create({ location, agent: "xcospan" })
+    try {
+      await client.session.prompt({ sessionID: session.id, text: "Research SECRET_PERSON" })
+      const rpc = client.rpc(XCoSpan)
+      for (const kind of ["redaction", "outbound"]) {
+        const review = await until(
+          async () =>
+            (await rpc.list({ sessionID: session.id }, { location })).reviews.find(
+              (item) => item.kind === kind && item.status === "pending",
+            ),
+          kind,
+        )
+        await rpc.approve({ ...pick(review), revision: review.revision }, { location })
+      }
+      const run = await until(
+        async () =>
+          (await rpc.list({ sessionID: session.id }, { location })).runs.find(
+            (item) => item.status === "running",
+          ),
+        "running collaboration",
+      )
+      const before = requests.filter((request) => request.model === "cloud").length
+      await client.session.remove({ sessionID: target === "parent" ? session.id : run.childID })
+      releaseCloud!()
+      if (target === "parent") {
+        await until(
+          async () =>
+            (await rpc.list({ sessionID: session.id }, { location })).runs.length === 0 ? true : undefined,
+          "deleted running task records removed",
+        )
+        await expect(rpc.recover({ id: run.id, sessionID: session.id }, { location })).rejects.toMatchObject({
+          type: "action",
+          message: "Cloud task not found",
+        })
+      } else {
+        await client.session.wait({ sessionID: session.id })
+        const recovered = await rpc.recover({ id: run.id, sessionID: session.id }, { location })
+        expect(recovered.status).toBe("failed")
+        expect(recovered.error).toContain("deleted")
+      }
+      expect(requests.filter((request) => request.model === "cloud")).toHaveLength(before)
+      await restartHost()
+    } finally {
+      releaseCloud!()
+      cloudGate = undefined
+    }
+  }, 90000)
+}
+
+test.each(["redaction", "outbound"] as const)(
+  "cancelling %s ends the native turn and a later query can proceed",
+  async (stage) => {
+    const session = await client.session.create({ location, agent: "xcospan" })
+    const rpc = client.rpc(XCoSpan)
+    await client.session.prompt({ sessionID: session.id, text: "Research SECRET_PERSON" })
+    let cancelled
+    for (const kind of ["redaction", "outbound"]) {
+      const review = await until(
+        async () =>
+          (await rpc.list({ sessionID: session.id }, { location })).reviews.find(
+            (item) => item.kind === kind && item.status === "pending",
+          ),
+        kind,
+      )
+      if (kind === stage) {
+        cancelled = review
+        await rpc.cancel(pick(review), { location })
+        break
+      }
+      await rpc.approve({ ...pick(review), revision: review.revision }, { location })
+    }
+    expect((await client.session.get({ sessionID: session.id })).outcome).toBe("interrupted")
+    expect(
+      (await rpc.list({ sessionID: session.id }, { location })).reviews.some(
+        (item) => item.status === "pending",
+      ),
+    ).toBe(false)
+    await client.session.prompt({ sessionID: session.id, text: "LOCAL_ONLY new task after cancellation" })
+    await client.session.wait({ sessionID: session.id })
+    expect((await client.session.get({ sessionID: session.id })).outcome).toBe("succeeded")
+    await rpc.cancel(pick(cancelled!), { location })
+    expect((await client.session.get({ sessionID: session.id })).outcome).toBe("succeeded")
+  },
+)

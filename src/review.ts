@@ -45,6 +45,17 @@ export class Reviews {
     }
   }
 
+  remove(sessionID: string) {
+    return this.serial(async () => {
+      for (const review of await this.list(sessionID)) {
+        await this.store.remove(`review/${review.id}`)
+        const waiter = this.pending.get(review.id)
+        this.pending.delete(review.id)
+        waiter?.reject(new Error("Session deleted"))
+      }
+    })
+  }
+
   async get(id: string, sessionID: string): Promise<Review> {
     const record = await this.store.get(`review/${id}`)
     if (!record) throw new ActionError("Review not found")

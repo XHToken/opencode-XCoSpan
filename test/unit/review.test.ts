@@ -78,3 +78,17 @@ test("notification failure cancels instead of silently waiting", async () => {
   await expect(reviews.request(input, new AbortController().signal)).rejects.toThrow("disconnected")
   expect((await reviews.list("parent"))[0]?.status).toBe("cancelled")
 })
+
+test("deleting a session removes its sensitive reviews and releases waiting tools", async () => {
+  const { reviews, input, emitted, store } = fixture()
+  const waiting = reviews.request(input, new AbortController().signal).catch((error) => error)
+  const id = await emitted
+  await store.set("review/other", { ...(await reviews.get(id, "parent")), id: "other", sessionID: "other" })
+  await reviews.remove("parent")
+  expect((await waiting).message).toBe("Session deleted")
+  expect(await reviews.list("parent")).toEqual([])
+  expect(await reviews.list("other")).toHaveLength(1)
+  await expect(reviews.approve(id, "parent", 1)).rejects.toThrow("Review not found")
+  await reviews.remove("parent")
+  await reviews.close()
+})

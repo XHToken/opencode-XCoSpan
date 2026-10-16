@@ -6,7 +6,7 @@ import { registerContext } from "./context"
 import { CLOUD_AGENT, CLOUD_TOOLS, Delegations, PRIMARY_AGENT } from "./delegate"
 import { PRIMARY_INSTRUCTIONS, CLOUD_INSTRUCTIONS } from "./prompts"
 import { Reviews } from "./review"
-import { ActionError, exposeAction } from "./errors"
+import { ActionError, exposeAction, isMissingSession } from "./errors"
 import { XCoSpan } from "./rpc"
 import { Config, Content, Task, RouteResult } from "./types"
 import { withRouting } from "./routing"
@@ -40,9 +40,33 @@ const plugin = {
       const session = await ctx.session.get({ sessionID })
       return session.location.directory === ctx.location.directory
     }
+    const runs = new Delegations(ctx, reviews)
+    lifecycle.deleted = async (sessionID) => {
+      await runs.remove(sessionID)
+      await reviews.remove(sessionID)
+    }
+    const records = [...(await reviews.list()), ...(await runs.list())]
+    for (const sessionID of new Set(records.map((record) => record.sessionID))) {
+      try {
+        await ctx.session.get({ sessionID })
+      } catch (error) {
+        if (!isMissingSession(error, sessionID)) throw error
+        await lifecycle.deleted(sessionID)
+      }
+    }
     await reviews.restore(ownsSession)
-    const runs = config ? new Delegations(ctx, reviews, config) : undefined
-    if (runs) await runs.restore(ownsSession)
+    await runs.restore(ownsSession)
+    const executing = async (sessionID: string, callID: string) =>
+      (await ctx.session.context({ sessionID })).some(
+        (message) =>
+          message.type === "assistant" &&
+          message.content.some(
+            (part) =>
+              part.type === "tool" &&
+              part.id === callID &&
+              (part.state.status === "running" || part.state.status === "streaming"),
+          ),
+      )
     const manage = await management(ctx, config, lifecycle)
     const rpc = await ctx.rpc.register(XCoSpan, {
       ...manage,
@@ -56,27 +80,38 @@ const plugin = {
       }),
       list: async ({ sessionID }) => ({
         reviews: await reviews.list(sessionID),
-        runs: runs ? await runs.list(sessionID) : [],
+        runs: await runs.list(sessionID),
       }),
       get: ({ id, sessionID }, rpc) => exposeAction(() => reviews.get(id, sessionID), rpc),
       edit: ({ id, sessionID, revision, candidate }, rpc) =>
         exposeAction(() => reviews.edit(id, sessionID, revision, candidate), rpc),
       approve: ({ id, sessionID, revision }, rpc) =>
         exposeAction(() => reviews.approve(id, sessionID, revision), rpc),
-      cancel: ({ id, sessionID }, rpc) => exposeAction(() => reviews.cancel(id, sessionID), rpc),
+      cancel: ({ id, sessionID }, rpc) =>
+        exposeAction(async () => {
+          const review = await reviews.get(id, sessionID)
+          const active = review.status === "pending" && (await executing(sessionID, review.callID))
+          const cancelled = await reviews.cancel(id, sessionID)
+          if (active) await lifecycle.stop(sessionID)
+          return cancelled
+        }, rpc),
       cancelRun: ({ id, sessionID }, rpc) =>
         exposeAction(async () => {
-          if (!runs) throw new ActionError("Configure local and cloud models first")
-          return runs.cancel(id, sessionID)
+          if (!config) throw new ActionError("Configure local and cloud models first")
+          const run = await runs.get(id, sessionID)
+          const active = await executing(sessionID, run.callID)
+          const cancelled = await runs.cancel(id, sessionID)
+          if (active && cancelled.status === "cancelled") await lifecycle.stop(sessionID)
+          return cancelled
         }, rpc),
       recover: ({ id, sessionID }, rpc) =>
         exposeAction(async () => {
-          if (!runs) throw new ActionError("Configure local and cloud models first")
+          if (!config) throw new ActionError("Configure local and cloud models first")
           return runs.recover(id, sessionID)
         }, rpc),
     })
     emit = async (sessionID, id) => rpc.events.emit("changed", { sessionID, id })
-    if (!config || !runs) return () => rpc.dispose()
+    if (!config) return () => rpc.dispose()
     const service = capabilities(config, ctx.generate)
     const model = (ref: Config["localModel"]) => ({
       id: Model.ID.make(ref.id),
@@ -178,6 +213,7 @@ const plugin = {
               materials,
             }),
             { ...tool, signal: AbortSignal.any([tool.signal, lifetime.signal]) },
+            config.cloudModel,
           )
         },
       })

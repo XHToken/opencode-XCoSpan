@@ -1,3 +1,14 @@
+import { Predicate } from "effect"
+
+// Match the native error and its target; transport and storage errors must remain visible.
+export function isMissingSession(error: unknown, sessionID: string): boolean {
+  return (
+    Predicate.isTagged(error, "Session.NotFoundError") &&
+    "sessionID" in error &&
+    error.sessionID === sessionID
+  )
+}
+
 // Expected user actions can fail without concealing the reason behind rpc.internal.
 export class ActionError extends Error {}
 

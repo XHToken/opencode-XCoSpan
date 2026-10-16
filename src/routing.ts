@@ -11,6 +11,7 @@ import { Config, RouteResult } from "./types"
 export interface Lifecycle {
   sessions: Set<string>
   stopping: boolean
+  deleted?(sessionID: string): Promise<void>
   stop(sessionID?: string): Promise<void>
 }
 export function withRouting(plugin: {
@@ -23,21 +24,6 @@ export function withRouting(plugin: {
       Effect.gen(function* () {
         const runtime = yield* Effect.context()
         const sessions = new Set<SessionContext["sessionID"]>()
-        yield* ctx.event.subscribe().pipe(
-          Stream.runForEach((event) =>
-            Effect.sync(() => {
-              if (
-                event.type === "session.execution.succeeded" ||
-                event.type === "session.execution.failed" ||
-                event.type === "session.execution.interrupted" ||
-                event.type === "session.deleted" ||
-                event.type === "session.moved"
-              )
-                sessions.delete(event.data.sessionID)
-            }),
-          ),
-          Effect.forkScoped,
-        )
         const lifecycle: Lifecycle = {
           sessions,
           stopping: false,
@@ -53,6 +39,22 @@ export function withRouting(plugin: {
             }
           },
         }
+        yield* ctx.event.subscribe().pipe(
+          Stream.runForEach((event) =>
+            Effect.tryPromise(async () => {
+              if (
+                event.type === "session.execution.succeeded" ||
+                event.type === "session.execution.failed" ||
+                event.type === "session.execution.interrupted" ||
+                event.type === "session.deleted" ||
+                event.type === "session.moved"
+              )
+                sessions.delete(event.data.sessionID)
+              if (event.type === "session.deleted") await lifecycle.deleted?.(event.data.sessionID)
+            }).pipe(Effect.tapCause(Effect.logError), Effect.orDie),
+          ),
+          Effect.forkScoped,
+        )
         const lifetime = new AbortController()
         yield* Effect.addFinalizer(() => Effect.sync(() => lifetime.abort()))
         // OpenCode 2.0.27 drops call options in its Promise adapter; native Effect requests retain cancellation.

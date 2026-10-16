@@ -4,9 +4,9 @@
 
 [![npm](https://img.shields.io/npm/v/@iflytekopensource/opencode-xcospan)](https://www.npmjs.com/package/@iflytekopensource/opencode-xcospan)
 [![OpenCode](https://img.shields.io/badge/OpenCode-2.0.27-202124)](https://opencode.ai)
-[![License: MIT](https://img.shields.io/badge/License-MIT-60794F)](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-60794F)](LICENSE)
 
-![Collaboration flow: each new request is routed, the local model plans the work, and local execution or approved cloud collaboration returns to local verification and delivery.](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/assets/readme/01-overview.png)
+![Collaboration flow: each new request is routed, the local model plans the work, and local execution or approved cloud collaboration returns to local verification and delivery.](docs/assets/readme/01-overview.png)
 
 An OpenCode V2 plugin for reviewed cloud collaboration. The local model organizes the task, uses tools and Skills, and selects relevant materials. The plugin connects routing, redaction, human review, delegation, and result delivery.
 
@@ -14,15 +14,17 @@ An OpenCode V2 plugin for reviewed cloud collaboration. The local model organize
 | -------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Route each new request; let the model choose its actions | Edit redacted materials and approve the complete outbound task | Inspect real execution, cancel work, and recover completed results |
 
-[Quick start](#quick-start) · [Review and control](#review-and-control) · [Configuration](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/CONFIGURATION.md) · [Contributing](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/CONTRIBUTING.md)
+[Quick start](#quick-start) · [Review and control](#review-and-control) · [Configuration](docs/CONFIGURATION.md) · [Contributing](CONTRIBUTING.md)
 
 ## Quick start
 
+The first npm release is in preparation. The registry commands below apply once the package is published. Contributors can use the [source setup](CONTRIBUTING.md#source-setup) now.
+
 Requires an existing **OpenCode 2.0.27** installation. XCoSpan reuses your OpenCode provider accounts and model catalog. The bundled file-extraction helper uses **Bun 1.4.3** on your PATH; install it through the [Bun installation guide](https://bun.sh/docs/installation) when using that helper.
 
-![Getting started: install with OpenCode's plugin command, configure two model roles through /xcospan, then send a task. Native commands provide review, progress, cancellation, recovery, and lifecycle controls.](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/assets/readme/03-get-started.png)
+![Getting started: install with OpenCode's plugin command, configure two model roles through /xcospan, then send a task. Native commands provide review, progress, cancellation, recovery, and lifecycle controls.](docs/assets/readme/03-get-started.png)
 
-Windows users can follow these commands in PowerShell. See [platform and provider compatibility](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/COMPATIBILITY.md) for native Windows, material extraction, and credential setup.
+Windows users can follow these commands in PowerShell. See [platform and provider compatibility](docs/COMPATIBILITY.md) for native Windows, material extraction, and credential setup.
 
 **1. Install the plugin**
 
@@ -59,13 +61,13 @@ Reuse accounts and models configured in OpenCode. To add an account, select **Co
 
 Send your task normally once XCoSpan starts. Review each redaction and the complete outbound task when prompted. For later sessions, open `/xcospan` and select **Start**, or choose **Use XCoSpan by default** during setup.
 
-> A remote provider configured for the local role receives original task inputs and local tool results. Protocols, credentials, and model limits come from OpenCode provider configuration. See [configuration](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/CONFIGURATION.md) and [data boundaries](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/SECURITY.md).
+> A remote provider configured for the local role receives original task inputs and local tool results. Protocols, credentials, and model limits come from OpenCode provider configuration. See [configuration](docs/CONFIGURATION.md) and [data boundaries](SECURITY.md).
 
 ## Review and control
 
-![Two review gates: select and extract relevant content, redact and review each material, assemble the task, then edit and approve the complete outbound revision before cloud collaboration starts.](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/assets/readme/02-review.png)
+![Two review gates: select and extract relevant content, redact and review each material, assemble the task, then edit and approve the complete outbound revision before cloud collaboration starts.](docs/assets/readme/02-review.png)
 
-**After every redaction**, inspect the original and candidate side by side. **Before cloud execution**, review the complete outbound task. Both reviews support editing, approval, and cancellation. Edits create a new revision; approval applies to that revision.
+**After every redaction**, inspect the original and candidate side by side. **Before cloud execution**, review the complete outbound task. Both reviews support editing, approval, and cancellation. Edits create a new revision; approval applies to that revision. Cancelling a review stops the current task, including concurrent pending reviews. Send a new request when you want to continue.
 
 The sidebar follows real execution, showing operations, targets, recent output, and elapsed time. Use `/xcospan-status` in a narrow terminal. Missing usage or pricing is shown as unknown.
 
@@ -79,7 +81,7 @@ The sidebar follows real execution, showing operations, targets, recent output, 
 
 Use `/xcospan` → **Stop the current task** to interrupt the current session's work. **Return to the previous agent** resumes your previous agent and model; a session started directly in XCoSpan offers **Choose another agent**. **Disable collaboration** stops related work and retains model configuration; **Enable collaboration** makes it available again.
 
-**Remove plugin** removes the entry from the selected configuration source. Model accounts, conversation history, reviews, and user files remain available. Check `/plugins` if another configuration source still loads XCoSpan.
+**Remove plugin** removes the entry from the selected configuration source. Model accounts, conversation history, reviews, and user files remain available. Deleting an OpenCode conversation removes its associated XCoSpan reviews and run records; deletions made while the plugin is unloaded are reconciled when it loads again. Check `/plugins` if another configuration source still loads XCoSpan.
 
 <details>
 <summary>Review shortcuts and supported materials</summary>
@@ -88,7 +90,7 @@ Use `/xcospan` → **Stop the current task** to interrupt the current session's 
 - **Compare and inspect images:** Ctrl+D switches comparison views. Ctrl+O opens the image viewer; arrow keys pan, `=` / `-` zoom, and `0` fits the viewport.
 - **Local materials:** the bundled `xcospan-materials` Skill guides task-driven selection of text, tables, and visual content. Its extraction helper uses [Xberg](https://github.com/xberg-io/xberg/tree/main/crates/xberg-node) for documents, spreadsheets, presentations, PDFs, markup, email, and other supported formats; `--formats` lists the installed engine's registry.
 - **Scans and calculations:** OCR uses explicitly selected local Tesseract language data. Spreadsheet calculations and visual interpretation use suitable local tools. Extraction preserves source references and engine warnings for inspection.
-- **Image redaction:** requires a configured local service. See the [capability service contract](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/CONFIGURATION.md#redaction).
+- **Image redaction:** requires a configured local service. See the [capability service contract](docs/CONFIGURATION.md#redaction).
 
 </details>
 
@@ -111,14 +113,14 @@ Use the exact configured package specifier if you installed a version or tag. Th
 
 ## Documentation and contributing
 
-| Document                                                                                                      | Contents                                                      |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [Configuration](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/CONFIGURATION.md) | Model setup, routing, and redaction service contracts         |
-| [Architecture](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/docs/ARCHITECTURE.md)   | Execution flow, module responsibilities, and host integration |
-| [Contributing](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/CONTRIBUTING.md)        | Development setup, checks, and change guidelines              |
-| [Testing](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/test/README.md)              | Unit, native host, and real-model validation                  |
-| [Security](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/SECURITY.md)                | Data access and deployment boundaries                         |
+| Document                               | Contents                                                      |
+| -------------------------------------- | ------------------------------------------------------------- |
+| [Configuration](docs/CONFIGURATION.md) | Model setup, routing, and redaction service contracts         |
+| [Architecture](docs/ARCHITECTURE.md)   | Execution flow, module responsibilities, and host integration |
+| [Contributing](CONTRIBUTING.md)        | Development setup, checks, and change guidelines              |
+| [Testing](test/README.md)              | Unit, native host, and real-model validation                  |
+| [Security](SECURITY.md)                | Data access and deployment boundaries                         |
 
 Package documentation and diagrams are included in every npm release. Repository access is managed by XHToken; members with access can report issues and propose changes in [GitHub](https://github.com/XHToken/opencode-XCoSpan).
 
-[MIT License](https://cdn.jsdelivr.net/npm/@iflytekopensource/opencode-xcospan@0.1.0/LICENSE)
+[MIT License](LICENSE)

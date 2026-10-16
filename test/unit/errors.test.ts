@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { ActionError, exposeAction } from "../../src/errors"
+import { ActionError, exposeAction, isMissingSession } from "../../src/errors"
 
 test("RPC exposes declared action failures and preserves unexpected defects", async () => {
   const context = {
@@ -16,4 +16,11 @@ test("RPC exposes declared action failures and preserves unexpected defects", as
       throw defect
     }, context),
   ).rejects.toBe(defect)
+})
+
+test("only native missing-session errors match their exact target", () => {
+  expect(isMissingSession({ _tag: "Session.NotFoundError", sessionID: "deleted" }, "deleted")).toBe(true)
+  expect(isMissingSession({ _tag: "Session.NotFoundError", sessionID: "other" }, "deleted")).toBe(false)
+  expect(isMissingSession(new Error("Session.NotFoundError"), "deleted")).toBe(false)
+  expect(isMissingSession({ _tag: "TransportError", sessionID: "deleted" }, "deleted")).toBe(false)
 })

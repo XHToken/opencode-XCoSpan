@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { join, resolve, posix } from "node:path"
 import { parseArgs } from "node:util"
 
 const { values } = parseArgs({
@@ -52,12 +52,14 @@ try {
     /^(src\/[^/]+\.ts|dist\/tui\.js|skills\/materials\/(SKILL\.md|extract\.ts)|server\.ts|tui\.tsx|rpc\.ts|package\.json|README\.md|CONTRIBUTING\.md|test\/README\.md|docs\/[^/]+\.md|docs\/assets\/readme\/[^/]+\.png|CHANGELOG\.md|SECURITY\.md|LICENSE)$/
   for (const path of files)
     if (!runtime.test(path)) throw new Error("Unexpected file included in package: " + path)
-  const readme = await contents.get("package/README.md")!.text()
-  const cdn = "https://cdn.jsdelivr.net/npm/" + manifest.name + "@" + manifest.version + "/"
-  for (const [, target] of readme.matchAll(/\]\((https:\/\/cdn\.jsdelivr\.net\/npm\/[^)]+)\)/g)) {
-    if (!target!.startsWith(cdn)) throw new Error("Documentation version does not match package: " + target)
-    const path = target!.slice(cdn.length).split("#")[0]!
-    if (!files.has(path)) throw new Error("Documentation target is absent from package: " + path)
+  for (const path of files) {
+    if (!path.endsWith(".md")) continue
+    const text = await contents.get("package/" + path)!.text()
+    for (const [, target] of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+      if (/^(?:[a-z]+:|#)/i.test(target!)) continue
+      const destination = posix.normalize(posix.join(posix.dirname(path), target!.split("#")[0]!))
+      if (!files.has(destination)) throw new Error(`Broken package documentation link: ${path} -> ${target}`)
+    }
   }
   console.log("Verified package contents:", files.size, "runtime and documentation files")
 

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { ActionError } from "./errors"
+import { ActionError, isMissingSession } from "./errors"
 import type { Plugin } from "@opencode/plugin"
 import type { ToolContext } from "@opencode/plugin/promise/tool"
 import { Run, Task, imageURI, type Config } from "./types"
@@ -26,7 +26,6 @@ export class Delegations {
   constructor(
     private ctx: Plugin.Context,
     private reviews: Reviews,
-    private config: Config,
   ) {}
 
   async list(sessionID?: string) {
@@ -59,8 +58,19 @@ export class Delegations {
     }
   }
 
+  async remove(sessionID: string) {
+    for (const run of await this.list(sessionID)) {
+      // Native session deletion waits for its execution to stop before emitting the event.
+      await this.active.get(run.id)?.done
+      await this.ctx.storage.remove(`child/${run.childID}`)
+      await this.ctx.storage.remove(`run/${run.id}`)
+    }
+  }
+
   async get(id: string, sessionID: string) {
-    const run = Run.parse(await this.ctx.storage.get(`run/${id}`))
+    const raw = await this.ctx.storage.get(`run/${id}`)
+    if (!raw) throw new ActionError("Cloud task not found")
+    const run = Run.parse(raw)
     if (run.sessionID !== sessionID) throw new Error("Run belongs to another session")
     return run
   }
@@ -75,7 +85,7 @@ export class Delegations {
     await this.ctx.storage.set(`run/${run.id}`, run)
   }
 
-  async execute(task: Task, context: ToolContext) {
+  async execute(task: Task, context: ToolContext, cloudModel: Config["cloudModel"]) {
     await context.progress({ status: "awaiting_confirmation" })
     const approved = await this.reviews.request(
       {
@@ -84,7 +94,7 @@ export class Delegations {
         kind: "outbound",
         original: task,
         candidate: task,
-        note: `Cloud model: ${this.config.cloudModel.providerID}/${this.config.cloudModel.id}; tools: ${CLOUD_TOOLS.join(", ")}. Review the complete text and all images before approving cloud collaboration.`,
+        note: `Cloud model: ${cloudModel.providerID}/${cloudModel.id}; tools: ${CLOUD_TOOLS.join(", ")}. Review the complete text and all images before approving cloud collaboration.`,
       },
       context.signal,
     )
@@ -125,7 +135,7 @@ export class Delegations {
         parentID: run.sessionID,
         title: "Cloud collaboration",
         agent: CLOUD_AGENT,
-        model: this.config.cloudModel,
+        model: cloudModel,
         metadata: { xcospanRun: run.id },
         permissions: [
           { action: "*", resource: "*", effect: "deny" },
@@ -161,7 +171,11 @@ export class Delegations {
     } catch (error) {
       const stored = await this.get(run.id, run.sessionID)
       if (!["completed", "cancelled", "failed"].includes(stored.status)) {
-        stored.status = signal.aborted ? "cancelling" : "unknown"
+        stored.status = signal.aborted
+          ? "cancelling"
+          : isMissingSession(error, run.childID)
+            ? "failed"
+            : "unknown"
         stored.error = error instanceof Error ? error.message : "Cloud task failed"
         await this.save(stored)
       }
@@ -190,7 +204,16 @@ export class Delegations {
   }
 
   async settle(run: Run) {
-    const child = await this.ctx.session.get({ sessionID: run.childID })
+    let child
+    try {
+      child = await this.ctx.session.get({ sessionID: run.childID })
+    } catch (error) {
+      if (!isMissingSession(error, run.childID)) throw error
+      run.status = "failed"
+      run.error = "The collaboration session was deleted; its result cannot be recovered"
+      await this.save(run)
+      return run
+    }
     if (child.parentID !== run.sessionID || child.metadata?.xcospanRun !== run.id)
       throw new Error("Child session ownership changed")
     run.status =
@@ -230,8 +253,12 @@ export class Delegations {
     }
     run.status = "cancelling"
     await this.save(run)
-    await this.ctx.session.interrupt({ sessionID: run.childID, resume: false })
-    await this.ctx.session.wait({ sessionID: run.childID })
+    try {
+      await this.ctx.session.interrupt({ sessionID: run.childID, resume: false })
+      await this.ctx.session.wait({ sessionID: run.childID })
+    } catch (error) {
+      if (!isMissingSession(error, run.childID)) throw error
+    }
     return this.settle(run)
   }
 
@@ -248,7 +275,11 @@ export class Delegations {
     }
     if (original?.type === "tool" && original.state.status === "running" && !restoring)
       throw new ActionError("The original delegation tool is still running")
-    await this.ctx.session.wait({ sessionID: run.childID })
+    try {
+      await this.ctx.session.wait({ sessionID: run.childID })
+    } catch (error) {
+      if (!isMissingSession(error, run.childID)) throw error
+    }
     await this.settle(run)
     if (run.status !== "completed" || run.delivered) return run
     await this.ctx.session.synthetic({

@@ -5,7 +5,8 @@
 ```text
 Pull request / main
   -> workflow and shell validation
-  -> Linux + macOS, Node 22 + 24
+  -> commit-history secret scan and dependency audit
+  -> Linux + macOS + Windows, Node 22 + 24
   -> types, formatting, unit tests
   -> build and inspect npm tarball
   -> native plugin add / check / update / remove against the tarball registry
@@ -67,7 +68,7 @@ New trusted-publisher configurations must complete their first successful public
 
 ## Publish a version
 
-1. Update `package.json`, `bun.lock`, and `CHANGELOG.md` together. Describe user-visible changes and breaking contracts. Update the README's versioned npm CDN links to the release version. Documentation and diagrams ship in the package so that npm users can read them independently of repository access. Verify those URLs after publication. Repository visibility remains a maintainer decision.
+1. Update `package.json`, `bun.lock`, and `CHANGELOG.md` together. Describe user-visible changes and breaking contracts. Remove the README's first-release notice when the package becomes available. Documentation and diagrams use relative links and ship in the package; artifact validation checks their targets. Verify README rendering on GitHub and npm after publication. Repository visibility remains a maintainer decision.
 2. Merge the reviewed revision into `main` and inspect its CI result.
 3. Push a tag matching the exact version, such as `v0.1.0` or `v0.2.0-rc.1`. The Release workflow rejects version mismatches and commits outside `main`.
 4. Approve the GitHub environment if configured. Stable versions publish to `latest`; prereleases publish to `next`.
@@ -86,7 +87,7 @@ Remove only the test version with `npm unpublish <name>@<test-version>`. Verify 
 ## Other workflows
 
 - **Live models:** explicit manual run with the `live-tests` environment's `XCOSPAN_LIVE_CONFIG` secret. Supply the JSON schema in [Testing](../test/README.md), with credentials resolved in provider settings. The runner deletes configuration and request diagnostics after the run. Paid model tests never run for pull requests.
-- **Dependency audit:** weekly and manually triggered `bun audit`.
+- **Dependency audit:** every verification run, plus weekly and manually triggered `bun audit`.
 - **Dependabot:** weekly Bun lockfile and GitHub Actions updates. OpenCode and OpenTUI packages are grouped for coordinated review; updates still run the complete checks.
 
 ## References

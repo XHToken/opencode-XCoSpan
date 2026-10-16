@@ -377,6 +377,14 @@ test("real quick start and four consecutive tasks use one native TUI session", a
         answer: "899",
       },
     ]
+    const reviewedTable = [
+      "User-reviewed customer revenue table. Identities and contact details are withheld.",
+      "The user authorizes these figures for the requested revenue and concentration analysis.",
+      "Customer,Revenue 2025,Revenue 2026",
+      "Customer A,120,168",
+      "Customer B,80,76",
+      "The dataset contains two customers. Units are unspecified.",
+    ].join("\n")
     const evidence: unknown[] = []
     for (const step of steps) {
       const before = await rpc.list({ sessionID: session.id }, options)
@@ -427,6 +435,31 @@ test("real quick start and four consecutive tasks use one native TUI session", a
           await screen(label + " · revision")
           await screen("Ctrl+A Approve")
           expect(records.slice(requestStart).filter((item) => item.role === "cloud")).toHaveLength(0)
+          if (review.kind === "redaction" && step.name === "cloud-file") {
+            // Exercise the user's substantive review: preserve needed figures and remove identities.
+            // This edits an approval candidate, never the redaction algorithm or a sent payload.
+            expect(JSON.stringify(review.original)).toContain("168")
+            tui.write("\x05")
+            await screen("Redacted content · Tab")
+            tui.write("\x1b[97;9u")
+            tui.write("\x1b[200~" + reviewedTable + "\x1b[201~")
+            await screen("User-reviewed customer revenue table")
+            tui.write("\x13")
+            await until(
+              async () => {
+                const saved = await rpc.get({ id: review.id, sessionID: session.id }, options)
+                return saved.revision === review.revision + 1 &&
+                  "type" in saved.candidate &&
+                  saved.candidate.type === "text" &&
+                  saved.candidate.text === reviewedTable
+                  ? true
+                  : undefined
+              },
+              "edited material revision",
+              15000,
+            )
+            await screen("Ctrl+A Approve")
+          }
           if (review.kind === "outbound") {
             tui.write("\x05")
             await screen("Task goal · Tab")
@@ -474,6 +507,10 @@ test("real quick start and four consecutive tasks use one native TUI session", a
         ).toBe(true)
         expect(runs.length).toBeGreaterThan(0)
         expect(runs.every((item) => item.status === "completed")).toBe(true)
+        if (step.name === "cloud-file") {
+          expect(reviews.some((item) => item.kind === "redaction" && item.revision > 1)).toBe(true)
+          expect(JSON.stringify(cloud)).toContain(JSON.stringify(reviewedTable).slice(1, -1))
+        }
         for (const run of runs) {
           const call = history
             .flatMap((item) => (item.type === "assistant" ? item.content : []))

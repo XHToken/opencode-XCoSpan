@@ -363,7 +363,7 @@ export function ReviewDialog(props: {
       },
       {
         bind: "ctrl+x",
-        title: "Cancel",
+        title: "Cancel task",
         run: () =>
           action(async () => {
             await props.client.cancel({ id: review().id, sessionID: review().sessionID }, props.options)
@@ -482,7 +482,7 @@ export function ReviewDialog(props: {
         <text flexShrink={0}>
           {busy()
             ? "Processing..."
-            : "Ctrl+E Edit · Ctrl+S Save · Ctrl+R Reload · Ctrl+A Approve · Ctrl+X Cancel"}
+            : "Ctrl+E Edit · Ctrl+S Save · Ctrl+R Reload · Ctrl+A Approve · Ctrl+X Cancel task"}
         </text>
         <Show when={dirty()}>
           <text flexShrink={0} fg={ctx.theme.text.muted}>

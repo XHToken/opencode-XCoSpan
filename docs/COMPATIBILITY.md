@@ -2,9 +2,11 @@
 
 ## Host and operating systems
 
-XCoSpan targets OpenCode 2.0.27. The package verification workflow runs Node.js 22 and 24 on Linux, macOS, and native Windows x64 (Windows Server 2025). It installs the actual tarball with npm and Bun, loads it into OpenCode, and exercises native terminal setup, review, cancellation, recovery, and removal. Test workspaces and materials include spaces, non-ASCII characters, and URL-reserved characters.
+XCoSpan targets OpenCode 2.0.27. The package verification workflow is configured for Node.js 22 and 24 on Linux, macOS, and native Windows x64 (Windows Server 2025). It installs the actual tarball with npm and Bun, loads it into OpenCode, and exercises native terminal setup, review, cancellation, recovery, and removal. Test workspaces and materials include spaces, non-ASCII characters, and URL-reserved characters.
 
-The bundled material helper uses Bun 1.4.3 and Xberg 1.3.10. Xberg distributes a native Windows x64 binary. Native Windows ARM64 extraction is not covered by that dependency's published platform packages or this test matrix.
+The bundled material helper uses Bun 1.4.3 and Xberg 1.3.10. Xberg distributes a native Windows x64 binary. The published Xberg 1.3.10 packages do not include macOS Intel (x64) or Windows ARM64 binaries. The bundled extraction helper cannot run natively on those architectures. Use an available local extraction tool through the model's tools and Skills.
+
+A configured CI target establishes the intended test matrix. Check the latest successful run for validation of a specific commit; local macOS results do not establish Windows or Linux coverage.
 
 ### Windows quick start
 
