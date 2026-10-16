@@ -40,6 +40,11 @@ export async function stopHostProcess(host: Bun.Subprocess, signal: "SIGTERM" | 
   if (host.exitCode === null && host.signalCode === null) {
     if (process.platform === "win32") {
       const pids = await windowsProcessTree(host.pid)
+      if (host.exitCode !== null || host.signalCode !== null) {
+        if (!pids.every(exited)) throw new Error("Launcher exited with live descendants")
+        await host.exited
+        return
+      }
       const kill = Bun.spawn(["taskkill.exe", "/PID", String(host.pid), "/T", "/F"], {
         stdout: "pipe",
         stderr: "pipe",

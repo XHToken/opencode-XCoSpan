@@ -14,9 +14,18 @@ test.skipIf(process.platform !== "win32")(
     )
     try {
       const reader = host.stdout.getReader()
-      const first = await reader.read()
-      const childID = Number(new TextDecoder().decode(first.value).trim())
-      reader.releaseLock()
+      const decoder = new TextDecoder()
+      let output = ""
+      try {
+        while (!output.includes("\n")) {
+          const chunk = await reader.read()
+          if (chunk.done) throw new Error("Launcher exited before reporting its child PID")
+          output += decoder.decode(chunk.value, { stream: true })
+        }
+      } finally {
+        reader.releaseLock()
+      }
+      const childID = Number(output.slice(0, output.indexOf("\n")).trim())
       expect(Number.isInteger(childID) && childID > 0).toBe(true)
       expect(() => process.kill(childID, 0)).not.toThrow()
       await stopHostProcess(host)
