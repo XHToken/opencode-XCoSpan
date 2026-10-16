@@ -21,6 +21,14 @@ jobs:
     timeout-minutes: 90
     environment: live-tests
     steps:
+      - name: Check live model configuration
+        env:
+          LIVE_CONFIG: ${{ secrets.XCOSPAN_LIVE_CONFIG }}
+        run: |
+          if [ -z "$LIVE_CONFIG" ]; then
+            echo "::error::Configure XCOSPAN_LIVE_CONFIG in the live-tests environment before running Live models."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false

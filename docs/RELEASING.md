@@ -1,5 +1,14 @@
 # Releasing
 
+## Repository configuration
+
+- Set `main` as the default branch. Pull requests target `main`; Check validates pushes and pull requests for that branch.
+- Configure the `npm` environment with `NPM_TOKEN`, a granular token with publication rights to the package scope. Publication checks for this secret before the verification matrix. Validation runs with `publish=false` do not require publication credentials.
+- Configure the `live-tests` environment with `XCOSPAN_LIVE_CONFIG` using the schema in [Testing](../test/README.md#live-model-configuration). Live models checks for this secret before installing dependencies.
+- Apply the desired environment approval rules. A publication can require approval for both its credential check and its publishing job.
+- Protect `main` against force pushes and deletion, and require the Check jobs before merging. Branch protection and environment controls depend on repository permissions and the GitHub plan.
+- Check the repository's Actions page after changes to branches or workflow settings. Verify the intended triggers and results before publishing a version.
+
 ## Pipeline
 
 ```text

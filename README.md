@@ -2,7 +2,6 @@
 
 **Local execution and reviewed cloud collaboration for OpenCode.**
 
-[![npm](https://img.shields.io/npm/v/@iflytekopensource/opencode-xcospan)](https://www.npmjs.com/package/@iflytekopensource/opencode-xcospan)
 [![OpenCode](https://img.shields.io/badge/OpenCode-2.0.27-202124)](https://opencode.ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-60794F)](LICENSE)
 
@@ -18,9 +17,7 @@ XCoSpan connects routing, redaction, user review, cloud collaboration, and resul
 
 ## Quick start
 
-Requires an existing **OpenCode 2.0.27** installation. XCoSpan uses your OpenCode provider accounts and model catalog. The bundled file-extraction helper uses **Bun 1.4.3** on your PATH; install it through the [Bun installation guide](https://bun.sh/docs/installation) when using that helper.
-
-![Getting started: install with OpenCode's plugin command, configure two model roles through /xcospan, then send a task. Native commands provide review, progress, cancellation, recovery, and lifecycle controls.](docs/assets/readme/03-get-started.png)
+Requires **OpenCode 2.0.27**, **Bun 1.4.3**, Git, and read access to this repository. XCoSpan uses your OpenCode provider accounts and model catalog. Install Bun through the [Bun installation guide](https://bun.sh/docs/installation).
 
 Windows users can follow these commands in PowerShell. See [platform and provider compatibility](docs/COMPATIBILITY.md) for native Windows, material extraction, and credential setup.
 
@@ -29,10 +26,13 @@ Windows users can follow these commands in PowerShell. See [platform and provide
 Run in your terminal:
 
 ```sh
-opencode plugin add @iflytekopensource/opencode-xcospan
+git clone --depth 1 --branch main https://github.com/XHToken/opencode-XCoSpan.git
+cd opencode-XCoSpan
+bun install --frozen-lockfile
+bun run setup
 ```
 
-OpenCode downloads the package and adds it to your global configuration. Existing provider accounts and workspace settings are retained.
+The setup command builds the plugin and registers this checkout in your global OpenCode configuration. Existing provider accounts and workspace settings are retained. Keep the checkout at this location; OpenCode loads the plugin from it. Authenticate Git with your GitHub account to access the private repository.
 
 **2. Open your workspace**
 
@@ -94,20 +94,37 @@ Use `/xcospan` → **Stop the current task** to interrupt the current session's 
 
 ## Update or uninstall
 
-For the npm installation above, use these terminal commands:
+For the checkout installation above, run these commands from its directory:
+
+```sh
+git pull --ff-only origin main
+bun install --frozen-lockfile
+bun run build
+```
+
+Stop active work before updating, then reopen OpenCode. To uninstall, open `/xcospan` and select **Remove plugin** for the registered checkout. Check `/plugins` to confirm removal before deleting the checkout directory.
+
+<details>
+<summary>Registry installation</summary>
+
+Registry installation requires a published version of `@iflytekopensource/opencode-xcospan`. Check availability before installing:
+
+```sh
+npm view @iflytekopensource/opencode-xcospan version
+opencode plugin add @iflytekopensource/opencode-xcospan
+```
+
+Remove an existing checkout entry through `/xcospan` before adding the registry package. Manage registry installations with:
 
 ```sh
 opencode plugin check @iflytekopensource/opencode-xcospan
 opencode plugin update @iflytekopensource/opencode-xcospan
-```
-
-Stop active work before updating, then reopen OpenCode. To remove the global plugin entry:
-
-```sh
 opencode plugin remove @iflytekopensource/opencode-xcospan
 ```
 
-Use the exact configured package specifier if you installed a version or tag. The `/xcospan` management interface also supports removal from a selected configuration source.
+Use the exact configured package specifier if you installed a version or tag. Stop active work before updating, then reopen OpenCode.
+
+</details>
 
 ## Documentation and contributing
 

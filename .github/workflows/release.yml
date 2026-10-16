@@ -44,8 +44,25 @@ jobs:
           else
             bun scripts/release.ts
           fi
+  publication-access:
+    if: github.event_name == 'push' || inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment: npm
+    steps:
+      - name: Check npm publication credentials
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::Configure NPM_TOKEN in the npm environment before publishing."
+            exit 1
+          fi
   verify:
-    needs: metadata
+    needs: [metadata, publication-access]
+    if: >-
+      !cancelled() && needs.metadata.result == 'success' &&
+      (needs.publication-access.result == 'success' || needs.publication-access.result == 'skipped')
     uses: ./.github/workflows/verify.yml
   dry-run:
     needs: [metadata, verify]

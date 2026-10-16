@@ -21,7 +21,7 @@ Rebuild with `bun run build` after editing TUI code. OpenTUI and Solid remain ex
 To load a source checkout into OpenCode:
 
 ```sh
-git clone https://github.com/XHToken/opencode-XCoSpan.git
+git clone --depth 1 --branch main https://github.com/XHToken/opencode-XCoSpan.git
 cd opencode-XCoSpan
 bun install --frozen-lockfile
 bun run setup

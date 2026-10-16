@@ -6,18 +6,20 @@ XCoSpan targets OpenCode 2.0.27. The package verification workflow is configured
 
 The bundled material helper uses Bun 1.4.3 and Xberg 1.3.10. Xberg distributes a native Windows x64 binary. The published Xberg 1.3.10 packages do not include macOS Intel (x64) or Windows ARM64 binaries. The bundled extraction helper cannot run natively on those architectures. Use an available local extraction tool through the model's tools and Skills.
 
-Per-platform validation results are recorded in the verification workflow artifacts for each commit.
+Per-platform validation results are recorded in the verification workflow job logs. The Linux Node.js 24 job also uploads the verified package and checksum.
 
 ### Windows quick start
 
 Use Windows Terminal with PowerShell. The [Quick start](../README.md#quick-start) commands are the same on Windows:
 
 ```powershell
-opencode plugin add @iflytekopensource/opencode-xcospan
-opencode
+git clone --depth 1 --branch main https://github.com/XHToken/opencode-XCoSpan.git
+cd opencode-XCoSpan
+bun install --frozen-lockfile
+bun run setup
 ```
 
-Enter `/xcospan` to choose accounts and models, test the connection, and start. Keep Bun on the PATH inherited by OpenCode when using the material helper. Install Bun using its [official Windows instructions](https://bun.com/docs/installation), then reopen the terminal and OpenCode.
+Open your workspace in OpenCode, then enter `/xcospan` to choose accounts and models, test the connection, and start. Keep Bun on the PATH inherited by OpenCode when using the material helper. Install Bun using its [official Windows instructions](https://bun.com/docs/installation), then reopen the terminal and OpenCode.
 
 Quote file paths containing spaces. The helper accepts native drive paths and resolves them through the operating system. It keeps the original file unchanged.
 
