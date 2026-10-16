@@ -26,6 +26,7 @@ export class Delegations {
   constructor(
     private ctx: Plugin.Context,
     private reviews: Reviews,
+    private changed: (sessionID: string, id: string) => Promise<void>,
   ) {}
 
   async list(sessionID?: string) {
@@ -83,6 +84,7 @@ export class Delegations {
 
   async save(run: Run) {
     await this.ctx.storage.set(`run/${run.id}`, run)
+    await this.changed(run.sessionID, run.id)
   }
 
   async execute(task: Task, context: ToolContext, cloudModel: Config["cloudModel"]) {

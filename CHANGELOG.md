@@ -8,6 +8,7 @@
 - Capability-based routing and text redaction through English model instructions.
 - Text and optional image redaction review, editable outbound approval, and version-bound delegation.
 - Progress, cancellation, recovery, and result delivery through OpenCode sessions.
+- Collaboration stages restore from persisted task and review records when a terminal connects or reconnects.
 - User cancellation stops the active task and concurrent reviews; subsequent requests start normally.
 - Session deletion removes associated review and run records, including deletions made while the plugin was unloaded.
 - Recovery reports deleted collaboration sessions.

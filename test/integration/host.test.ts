@@ -476,7 +476,13 @@ async function startHost(port = 0) {
       "--log-level",
       "debug",
     ],
-    { cwd: location.directory, env: hostEnv, stdout: "pipe", stderr: "pipe", detached: true },
+    {
+      cwd: location.directory,
+      env: hostEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+      detached: process.platform !== "win32",
+    },
   )
   for (const stream of [host.stdout, host.stderr])
     void (async () => {
@@ -2384,9 +2390,13 @@ test("cloud authentication failure returns its native cause to the parent", asyn
   }
 })
 
-test.each(["recover", "cancel"])(
-  "native rate limit retry can %s within the same approved run",
-  async (action) => {
+test.each([
+  { action: "recover", late: false },
+  { action: "cancel", late: false },
+  { action: "cancel", late: true },
+])(
+  "native rate limit retry preserves approval and activity: %j",
+  async ({ action, late }) => {
     fault = {
       path: "/v1/chat/completions",
       status: 429,
@@ -2396,20 +2406,19 @@ test.each(["recover", "cancel"])(
     const before = requests.length
     const session = await client.session.create({ location, agent: "xcospan" })
     const rpc = client.rpc(XCoSpan)
-    const attached =
-      action === "cancel"
-        ? terminal(
-            [
-              process.env.OPENCODE_BIN ?? "opencode",
-              "--server",
-              hostURL,
-              "--session",
-              session.id,
-              location.directory,
-            ],
-            hostEnv,
-          )
-        : undefined
+    const attach = () =>
+      terminal(
+        [
+          process.env.OPENCODE_BIN ?? "opencode",
+          "--server",
+          hostURL,
+          "--session",
+          session.id,
+          location.directory,
+        ],
+        hostEnv,
+      )
+    let attached = action === "cancel" && !late ? attach() : undefined
     try {
       await client.session.prompt({ sessionID: session.id, text: "Research SECRET_PERSON" })
       for (const kind of ["redaction", "outbound"]) {
@@ -2435,19 +2444,28 @@ test.each(["recover", "cancel"])(
       }, "native rate limit retry")
       expect(retry.attempt).toBe(2)
       expect(retry.error.message).toContain("Cloud rate limit fixture")
+      if (action === "cancel" && late) attached = attach()
       if (attached) {
-        await until(async () => (attached.screen().includes("XCoSpan") ? true : undefined), "TUI startup")
-        attached.write("/xcospan-status")
+        const view = attached
+        await until(async () => {
+          const screen = view.screen()
+          return screen.includes("Outbound approvals · 1 approved") &&
+            screen.includes("Retry attempt 2") &&
+            screen.includes("Cloud collaboration running")
+            ? true
+            : undefined
+        }, "review closed and running task visible")
+        view.write("/xcospan-status")
         await until(
-          async () => (attached.screen().includes("XCoSpan: Status") ? true : undefined),
+          async () => (view.screen().includes("XCoSpan: Status") ? true : undefined),
           "status command",
         )
-        attached.write("\r")
+        view.write("\r")
         await until(
-          async () => (attached.screen().includes("Retry attempt 2") ? true : undefined),
+          async () => (view.screen().includes("Retry attempt 2") ? true : undefined),
           "native retry in cloud panel",
         )
-        expect(attached.screen()).toContain("Cloud rate limit fixture")
+        expect(view.screen()).toContain("Cloud rate limit fixture")
         const stopped = await rpc.cancelRun({ id: run.id, sessionID: session.id }, { location })
         expect(stopped.status).toBe("cancelled")
         expect((await client.session.get({ sessionID: run.childID })).outcome).toBe("interrupted")
@@ -2471,6 +2489,13 @@ test.each(["recover", "cancel"])(
       } else {
         expect(state.runs[0]?.result).toBeUndefined()
       }
+    } catch (error) {
+      if (attached)
+        console.error("Retry test terminal", {
+          exitCode: attached.process.exitCode,
+          screen: attached.screen(),
+        })
+      throw error
     } finally {
       fault = undefined
       await client.session.interrupt({ sessionID: session.id, resume: false })

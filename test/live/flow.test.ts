@@ -191,7 +191,7 @@ async function startHost(port = 0) {
       "--log-level",
       "debug",
     ],
-    { cwd: directory, env, stdout: "pipe", stderr: "pipe", detached: true },
+    { cwd: directory, env, stdout: "pipe", stderr: "pipe", detached: process.platform !== "win32" },
   )
   for (const stream of [host.stdout, host.stderr])
     void (async () => {

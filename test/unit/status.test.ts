@@ -181,3 +181,24 @@ test("unpriced or missing usage stays unknown; explicit zero pricing is distingu
   expect(sessionExpense([{ ...message, tokens: undefined }], [free])).toBe("Cost unknown")
   expect(sessionExpense([], [])).toBe("No completed calls")
 })
+
+test("persisted task stages survive missed progress events and remain scoped to the current call", () => {
+  const messages = [user, call("cloud_delegate", "preparing")]
+  const records = { runs: [{ callID: "call_1", status: "running" as const }], reviews: [] }
+  expect(collaborationStage({}, messages, true, records)).toBe("Cloud collaboration running")
+  expect(collaborationStage({}, [...messages, { ...user, id: "next" }], true, records)).toBe(
+    "Local execution",
+  )
+  expect(
+    collaborationStage({}, messages, true, {
+      ...records,
+      runs: [{ callID: "call_1", status: "cancelling" }],
+    }),
+  ).toBe("Cancelling cloud collaboration")
+  expect(
+    collaborationStage({}, [user, call("redact", "")], true, {
+      runs: [],
+      reviews: [{ callID: "call_1", kind: "redaction", status: "pending" }],
+    }),
+  ).toBe("Awaiting material review")
+})

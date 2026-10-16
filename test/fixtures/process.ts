@@ -1,4 +1,4 @@
-/** Stop an isolated host and its launcher descendants on the actual operating system. */
+/** Windows launchers stay attached and use taskkill; POSIX hosts use detached process groups. */
 export async function stopHostProcess(host: Bun.Subprocess, signal: "SIGTERM" | "SIGKILL" = "SIGTERM") {
   if (host.exitCode === null && host.signalCode === null) {
     if (process.platform === "win32") {

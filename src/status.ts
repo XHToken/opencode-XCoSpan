@@ -1,3 +1,4 @@
+import type { Review, Run } from "./types"
 import type {
   ModelInfo,
   SessionInfo,
@@ -121,10 +122,26 @@ export function loopActivity(messages: SessionMessageInfo[], running: boolean) {
   }
 }
 
+const runStages: Record<Run["status"], string> = {
+  prepared: "Preparing cloud collaboration",
+  running: "Cloud collaboration running",
+  completed: "Returning cloud results",
+  failed: "Cloud collaboration failed",
+  cancelling: "Cancelling cloud collaboration",
+  cancelled: "Cloud collaboration cancelled",
+  unknown: "Cloud outcome unknown",
+}
+
+export type StageRecords = {
+  runs: Pick<Run, "callID" | "status">[]
+  reviews: Pick<Review, "callID" | "kind" | "status">[]
+}
+
 export function collaborationStage(
   session: Pick<SessionInfo, "outcome" | "metadata">,
   messages: SessionMessageInfo[],
   running: boolean,
+  records: StageRecords = { runs: [], reviews: [] },
 ): string {
   if (!running) return session.outcome ? outcomes[session.outcome] : "Waiting for a task"
   const route = session.metadata?.xcospanRoute
@@ -144,6 +161,10 @@ export function collaborationStage(
   const active = calls.filter((part) => part.state.status === "running")
   const labels = active.flatMap((part) => {
     if (!["redact", "redact_image", "cloud_delegate"].includes(part.name)) return []
+    const run = records.runs.find((run) => run.callID === part.id)
+    if (run) return [runStages[run.status]]
+    const review = records.reviews.find((review) => review.callID === part.id && review.status === "pending")
+    if (review) return [review.kind === "redaction" ? stages.awaiting_review! : stages.awaiting_confirmation!]
     const state = part.state
     const status = state.status === "running" ? state.metadata.status : undefined
     return typeof status === "string" && stages[status] ? [stages[status]!] : []

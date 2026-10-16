@@ -21,11 +21,31 @@ import {
 
 function useSession(sessionID: () => string) {
   const ctx = usePlugin()
-  return {
-    session: () => ctx.data.session.get(sessionID()),
-    messages: () => ctx.data.session.message.list(sessionID()),
-    running: () => ctx.data.session.status(sessionID()) === "running",
+  const session = () => ctx.data.session.get(sessionID())
+  const messages = () => ctx.data.session.message.list(sessionID())
+  const running = () => ctx.data.session.status(sessionID()) === "running"
+  const rpc = ctx.client.rpc(XCoSpan)
+  const [record, { refetch }] = createResource(
+    () => session()?.agent === PRIMARY_AGENT && sessionID(),
+    (sessionID) => rpc.list({ sessionID }, { location: ctx.data.session.get(sessionID)!.location }),
+  )
+  onCleanup(
+    rpc.events.on("changed", (event) => {
+      if (event.data.sessionID === sessionID()) void refetch()
+    }),
+  )
+  onCleanup(
+    ctx.data.on("server.connected", () => {
+      void refetch()
+    }),
+  )
+  const stage = () => {
+    if (session()?.agent === PRIMARY_AGENT && running() && record.error)
+      return "Failed to load collaboration state"
+    if (session()?.agent === PRIMARY_AGENT && running() && !record()) return "Syncing collaboration state"
+    return collaborationStage(session()!, messages(), running(), record())
   }
+  return { session, messages, running, record, refetch, stage }
 }
 
 function CloudActivity(props: { sessionID: string }) {
@@ -236,21 +256,7 @@ export function CollaborationSidebar(props: { sessionID: string }) {
       ),
   )
   const route = () => (state.session() ? routeDecision(state.session()!, state.messages()) : undefined)
-  const rpc = ctx.client.rpc(XCoSpan)
-  const [record, { refetch }] = createResource(
-    () => state.session()?.agent === PRIMARY_AGENT && props.sessionID,
-    (sessionID) => rpc.list({ sessionID }, { location: ctx.data.session.get(sessionID)!.location }),
-  )
-  onCleanup(
-    rpc.events.on("changed", (event) => {
-      if (event.data.sessionID === props.sessionID) void refetch()
-    }),
-  )
-  onCleanup(
-    ctx.data.on("server.connected", () => {
-      void refetch()
-    }),
-  )
+  const { record, refetch } = state
   const reviews = () =>
     record.error
       ? []
@@ -259,21 +265,14 @@ export function CollaborationSidebar(props: { sessionID: string }) {
   const delegations = () => tools().filter((tool) => tool.name === "cloud_delegate")
   const confirmed = () =>
     reviews().filter((review) => review.kind === "outbound" && review.status === "approved").length
-  const pending = () =>
-    tools().some(
-      (tool) =>
-        tool.state.status === "running" &&
-        ["awaiting_review", "awaiting_confirmation"].includes(String(tool.state.metadata.status)),
-    )
+  const pending = () => reviews().some((review) => review.status === "pending")
   return (
     <Show when={state.session()?.agent === PRIMARY_AGENT}>
       <box flexDirection="column" gap={1} paddingBottom={1}>
         <text fg={ctx.theme.text.accent}>
           <b>XCoSpan · Current request</b>
         </text>
-        <text fg={pending() ? ctx.theme.text.warning : ctx.theme.text.base}>
-          {collaborationStage(state.session()!, state.messages(), state.running())}
-        </text>
+        <text fg={pending() ? ctx.theme.text.warning : ctx.theme.text.base}>{state.stage()}</text>
         <Show when={route()}>
           {(decision) => (
             <text fg={ctx.theme.text.muted}>
@@ -343,7 +342,7 @@ export function CollaborationBadge(props: { sessionID: string }) {
     <Show when={state.session()?.agent === PRIMARY_AGENT}>
       <box flexDirection="column">
         <text fg={ctx.theme.text.accent} onMouseUp={() => ctx.ui.panel.open("xcospan.status")}>
-          XCoSpan · {collaborationStage(state.session()!, state.messages(), state.running())}
+          XCoSpan · {state.stage()}
           {"  "} /xcospan-status View progress and usage
         </text>
         <For
@@ -441,9 +440,7 @@ export function CollaborationPanel(props: { panel: PanelInput }) {
         <Show when={state.session()}>
           {(session) => (
             <>
-              <text fg={ctx.theme.text.base}>
-                {collaborationStage(session(), state.messages(), state.running())}
-              </text>
+              <text fg={ctx.theme.text.base}>{state.stage()}</text>
               <Show when={route()}>
                 {(decision) => (
                   <box flexDirection="column">

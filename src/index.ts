@@ -40,7 +40,7 @@ const plugin = {
       const session = await ctx.session.get({ sessionID })
       return session.location.directory === ctx.location.directory
     }
-    const runs = new Delegations(ctx, reviews)
+    const runs = new Delegations(ctx, reviews, (sessionID, id) => emit(sessionID, id))
     lifecycle.deleted = async (sessionID) => {
       await runs.remove(sessionID)
       await reviews.remove(sessionID)
