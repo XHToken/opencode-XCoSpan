@@ -935,6 +935,9 @@ test.each(["environment", "account"] as const)(
     const path = join(target.directory, "opencode.json")
     await writeFile(path, JSON.stringify(config))
     await client.provider.list({ location: target })
+    expect((await client.integration.list({ location: target })).data.some((item) => item.id === id)).toBe(
+      true,
+    )
     if (authentication === "account")
       await client.integration.connect.key({ integrationID: id, key: "fixture-only", location: target })
     await until(
