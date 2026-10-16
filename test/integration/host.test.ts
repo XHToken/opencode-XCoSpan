@@ -2887,6 +2887,11 @@ test("cloud context failure before the first assistant returns its cause to the 
 })
 
 test("native TUI reviews multiple large images and replaces the selected material", async () => {
+  const red = { palette: 9, rgb: 0xff0000 }
+  const blue = { palette: 12, rgb: 0x0000ff }
+  const green = { palette: 10, rgb: 0x00ff00 }
+  const yellow = { palette: 11, rgb: 0xffff00 }
+  const colors = [red, blue, green, yellow]
   const portrait = quadrantPng(1200, 1800).toString("base64")
   const landscape = quadrantPng(2400, 800).toString("base64")
   const replacement = solidPng(2400, 800, [0, 255, 0]).toString("base64")
@@ -2944,7 +2949,7 @@ test("native TUI reviews multiple large images and replaces the selected materia
         "full width original image",
       )
       await until(
-        async () => ([9, 12, 10, 11].every((color) => tui.paletteCount(color) > 0) ? true : undefined),
+        async () => (colors.every((color) => tui.colorCount(color) > 0) ? true : undefined),
         "all four image quadrants rendered",
       )
       tui.write("=")
@@ -2952,21 +2957,20 @@ test("native TUI reviews multiple large images and replaces the selected materia
       tui.write("=")
       await until(
         async () =>
-          tui.screen().includes("400% viewport") && tui.paletteCount(9) > 0 && tui.paletteCount(11) === 0
+          tui.screen().includes("400% viewport") && tui.colorCount(red) > 0 && tui.colorCount(yellow) === 0
             ? true
             : undefined,
         "zoomed top left pixels",
       )
       tui.write("\x1b[F")
       await until(
-        async () => (tui.paletteCount(11) > 0 && tui.paletteCount(9) === 0 ? true : undefined),
+        async () => (tui.colorCount(yellow) > 0 && tui.colorCount(red) === 0 ? true : undefined),
         "panned bottom right pixels",
       )
       tui.write("0")
       await until(
         async () =>
-          tui.screen().includes("100% viewport") &&
-          [9, 12, 10, 11].every((color) => tui.paletteCount(color) > 0)
+          tui.screen().includes("100% viewport") && colors.every((color) => tui.colorCount(color) > 0)
             ? true
             : undefined,
         "fit restores all quadrants",
@@ -3070,7 +3074,7 @@ test("native TUI reviews multiple large images and replaces the selected materia
     }
     await until(
       async () =>
-        tui.paletteCount(10) > 0 && tui.paletteCount(12) === 0 && tui.paletteCount(11) === 0
+        tui.colorCount(green) > 0 && tui.colorCount(blue) === 0 && tui.colorCount(yellow) === 0
           ? true
           : undefined,
       "replacement pixels in detailed preview",
@@ -3588,6 +3592,13 @@ test.each([
           ),
         "TUI saved revision",
       )
+      await until(
+        async () =>
+          screen().includes("Material review · revision 2") && screen().includes("Ctrl+A Approve")
+            ? true
+            : undefined,
+        "TUI saved candidate ready for approval",
+      )
       tui.write("\x01")
       await until(
         async () =>
@@ -3677,6 +3688,14 @@ test.each([
         context: "REPLACED_FIELD_1",
         expectedOutput: "REPLACED_FIELD_2",
       })
+      await until(
+        async () =>
+          screen().includes(`Outbound review · revision ${saved.revision}`) &&
+          screen().includes("Ctrl+A Approve")
+            ? true
+            : undefined,
+        "TUI saved outbound ready for approval",
+      )
       tui.write("\x01")
       await until(
         async () => (screen().includes("Cloud collaboration running") ? true : undefined),
@@ -3742,7 +3761,9 @@ test.each([
       tui.write("\r")
       await until(
         async () =>
-          screen().includes("XCoSpan · Progress and usage") && screen().includes("Cost unknown")
+          ["XCoSpan · Progress and usage", "Cost unknown", "Input 90", "Input 30"].every((label) =>
+            screen().includes(label),
+          )
             ? true
             : undefined,
         "TUI native status panel",

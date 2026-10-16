@@ -1,4 +1,6 @@
+import { platform } from "node:process"
 import { Terminal } from "@xterm/headless"
+import { stopHostProcess } from "../fixtures/process"
 
 export function terminal(args: string[], env: Record<string, string | undefined>, cols = 150, rows = 50) {
   const display = new Terminal({ cols, rows, allowProposedApi: true })
@@ -27,7 +29,7 @@ export function terminal(args: string[], env: Record<string, string | undefined>
         (_, row) => buffer.getLine(buffer.viewportY + row)?.translateToString(true, 0, display.cols) ?? "",
       ).join("\n")
     },
-    paletteCount(color: number) {
+    colorCount(color: { palette: number; rgb: number }) {
       const buffer = display.buffer.active
       let count = 0
       for (let y = 0; y < display.rows; y++) {
@@ -36,17 +38,22 @@ export function terminal(args: string[], env: Record<string, string | undefined>
           const cell = line?.getCell(x)
           if (
             cell &&
-            ((cell.isFgPalette() && cell.getFgColor() === color) ||
-              (cell.isBgPalette() && cell.getBgColor() === color))
+            ((cell.isFgPalette() && cell.getFgColor() === color.palette) ||
+              (cell.isBgPalette() && cell.getBgColor() === color.palette) ||
+              (cell.isFgRGB() && cell.getFgColor() === color.rgb) ||
+              (cell.isBgRGB() && cell.getBgColor() === color.rgb))
           )
             count++
         }
       }
       return count
     },
-    async close(signal?: NodeJS.Signals) {
-      process.kill(signal)
-      await process.exited
+    async close(signal?: "SIGTERM" | "SIGKILL") {
+      if (platform === "win32") await stopHostProcess(process, signal)
+      else {
+        process.kill(signal)
+        await process.exited
+      }
       process.terminal?.close()
       display.dispose()
     },
