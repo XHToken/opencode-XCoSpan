@@ -44,7 +44,7 @@ beforeAll(async () => {
   await mkdir(liveRoot, { recursive: true })
   const root = await realpath(await mkdtemp(join(liveRoot, "run-")))
   artifactRoot = root
-  directory = join(root, "workspace")
+  directory = join(root, "\u00e9 \u6750\u6599 # workspace")
   await mkdir(directory)
   await cp(resolve(import.meta.dir, "../fixtures/materials"), directory, { recursive: true })
   await writeFile(

@@ -269,7 +269,7 @@ function completion(body: Request) {
 
 beforeAll(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), "xcospan-test-")))
-  location = { directory: join(root, "workspace") }
+  location = { directory: join(root, "\u00e9 \u6750\u6599 # workspace") }
   await mkdir(location.directory)
   imagePath = join(location.directory, "private-image.png")
   await writeFile(imagePath, Buffer.from(pixel, "base64"))
@@ -449,6 +449,7 @@ beforeAll(async () => {
   const env = {
     ...process.env,
     OPENCODE_PASSWORD: "xcospan-test",
+    XCOSPAN_FIXTURE_KEY: "fixture-only",
     XDG_CONFIG_HOME: join(root, "config"),
     XDG_DATA_HOME: join(root, "data"),
     XDG_CACHE_HOME: join(root, "cache"),
@@ -917,6 +918,39 @@ test("native setup opens account connection, preserves cancellation, adds custom
     await tui.close()
   }
 })
+
+test.each(["environment", "account"] as const)(
+  "model setup uses native %s credentials without persisting a key in plugin options",
+  async (authentication) => {
+    const id = "auth-" + authentication
+    const target = { directory: join(root, id) }
+    await mkdir(target.directory)
+    const config = await Bun.file(join(location.directory, "opencode.json")).json()
+    config.providers[id] = {
+      package: "@opencode/ai/providers/openai-compatible",
+      settings: { baseURL: server.url + "v1" },
+      ...(authentication === "environment" ? { env: ["XCOSPAN_FIXTURE_KEY"] } : {}),
+      models: { local: { capabilities: { tools: true }, limit: { context: 64000, output: 8000 } } },
+    }
+    const path = join(target.directory, "opencode.json")
+    await writeFile(path, JSON.stringify(config))
+    await client.provider.list({ location: target })
+    if (authentication === "account")
+      await client.integration.connect.key({ integrationID: id, key: "fixture-only", location: target })
+    await until(
+      async () =>
+        (await client.model.list({ location: target })).data.find(
+          (model) => model.providerID === id && model.id === "local" && model.enabled,
+        ),
+      "authenticated provider",
+    )
+    const result = await client.rpc(XCoSpan).testModel({ providerID: id, id: "local" }, { location: target })
+    expect(result.text).toBe("Connection and tool calling passed")
+    const saved = parseSettings(await Bun.file(path).text())
+    expect(saved.providers[id].settings.apiKey).toBeUndefined()
+    expect(JSON.stringify(saved.plugins)).not.toContain("fixture-only")
+  },
+)
 
 test("configuration adds a native custom provider and restores the previous default on disable", async () => {
   const target = { directory: join(root, "custom-provider") }

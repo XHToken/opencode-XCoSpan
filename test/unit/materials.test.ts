@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
-import { mkdtemp, readFile, rm, writeFile, realpath } from "node:fs/promises"
+import { copyFile, mkdtemp, readFile, rm, writeFile, realpath } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { extractMaterial } from "../../skills/materials/extract"
@@ -16,7 +16,8 @@ test.each([
   ["procurement-terms.pdf", "82 working days"],
   ["procurement-items.xlsx", "55000"],
 ])("extracts actual %s bytes and preserves source identity", async (name, fact) => {
-  const path = join(fixtures, name)
+  const path = join(directory, "\u00e9 \u6750\u6599 # " + name)
+  await copyFile(join(fixtures, name), path)
   const before = await readFile(path)
   const result = await extractMaterial(path)
   expect(result.source).toBe(await realpath(path))

@@ -9,7 +9,7 @@ import { command, packageRegistry } from "../fixtures/registry"
 test("native package commands preserve existing configuration through install, update and removal", async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), "xcospan-install-")))
   const registry = await packageRegistry(root)
-  const directory = join(root, "workspace")
+  const directory = join(root, "\u00e9 \u6750\u6599 # workspace")
   await mkdir(directory)
   const configDir = join(root, "config/opencode")
   await mkdir(configDir, { recursive: true })

@@ -8,7 +8,7 @@ import { parseSettings } from "../../src/settings"
 test("source setup preserves existing JSONC, permissions and plugin options on repeated installation", async () => {
   const root = await mkdtemp(join(tmpdir(), "xcospan-setup-"))
   try {
-    const source = join(root, "source")
+    const source = join(root, "\u00e9 \u6750\u6599 # source")
     const config = join(root, "config")
     await mkdir(join(source, "dist"), { recursive: true })
     await mkdir(config)
