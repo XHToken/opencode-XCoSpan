@@ -583,6 +583,16 @@ test("native TUI onboarding configures both roles then enters, exits, disables a
     expect((await client.session.get({ sessionID: session.id })).agent).toBe("xcospan")
     expect((await rpc.status({}, { location: target })).ready).toBe(true)
     await menu()
+    await pick("Configure models")
+    await screen("Review model configuration")
+    await pick("Save only")
+    await screen("Save model roles")
+    tui.write("\r")
+    await screen("Default agent for new sessions")
+    await pick("Keep the current default")
+    await screen("Model configuration applied")
+    expect((await rpc.status({}, { location: target })).ready).toBe(true)
+    await menu()
     await pick("Return to the previous agent")
     await screen("Returned to the previous agent")
     expect((await client.session.get({ sessionID: session.id })).agent).toBe("build")
@@ -1115,6 +1125,42 @@ test("onboarding saves native configuration, preserves defaults, switches agents
   )
   expect(await Bun.file(path).text()).toContain("fixture-only")
   expect((await client.session.get({ sessionID: session.id })).agent).toBe("build")
+})
+
+test("saving unchanged model settings keeps collaboration available", async () => {
+  const target = { directory: join(root, "unchanged-settings") }
+  await mkdir(target.directory)
+  const config = await Bun.file(join(location.directory, "opencode.json")).json()
+  delete config.plugins[1].options
+  const path = join(target.directory, "opencode.json")
+  await writeFile(path, JSON.stringify(config))
+  const rpc = client.rpc(XCoSpan)
+  const options = { location: target }
+  const initial = await rpc.settings({ paths: [path] }, options)
+  const models = {
+    localModel: { providerID: "fixture", id: "local" },
+    cloudModel: { providerID: "fixture", id: "cloud" },
+    enabled: true,
+  }
+  await rpc.saveSettings(
+    { token: initial.documents[0]!.token, revision: initial.documents[0]!.revision, ...models },
+    options,
+  )
+  await until(
+    async () =>
+      (await rpc.settings({ paths: [] }, options)).generation !== initial.generation ? true : undefined,
+    "initial configuration reload",
+  )
+  const state = await rpc.settings({ paths: [path] }, options)
+  const document = state.documents[0]!
+  const before = await Bun.file(path).text()
+  expect(
+    await rpc.saveSettings({ token: document.token, revision: document.revision, ...models }, options),
+  ).toEqual({ changed: false })
+  expect(await Bun.file(path).text()).toBe(before)
+  expect((await rpc.settings({ paths: [] }, options)).generation).toBe(state.generation)
+  const entered = await rpc.enter({}, options)
+  expect((await client.session.get({ sessionID: entered.sessionID })).agent).toBe("xcospan")
 })
 
 test("native status explains missing plugin model configuration", async () => {

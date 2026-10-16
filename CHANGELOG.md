@@ -15,6 +15,7 @@
 ### Setup and materials
 
 - `/xcospan` model configuration, connection checks, and lifecycle controls.
+- Saving unchanged model settings keeps collaboration available and completes immediately.
 - Installation, update, and removal through OpenCode plugin commands.
 - A materials Skill for task-driven extraction and source verification.
 - Package documentation and diagrams with validated relative links.

@@ -82,12 +82,13 @@ export async function management(
         idle()
         lifecycle.stopping = true
         try {
-          await settings.save(input)
+          const changed = await settings.save(input)
+          if (!changed) lifecycle.stopping = false
+          return { changed }
         } catch (error) {
           lifecycle.stopping = false
           throw error
         }
-        return {}
       }, rpc),
     addProvider: (input, rpc) =>
       exposeAction(async () => {

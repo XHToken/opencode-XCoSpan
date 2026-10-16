@@ -56,7 +56,7 @@ export function setupManagement(ctx: Plugin.Context) {
     await client.stop({}, options())
     return true
   }
-  async function reload(change: () => Promise<unknown>, check: () => Promise<boolean>) {
+  async function reload(change: () => Promise<boolean>, check: () => Promise<boolean>) {
     let finished = false
     let checking = false
     let settle!: () => void
@@ -89,7 +89,7 @@ export function setupManagement(ctx: Plugin.Context) {
     })
     void observed.catch(() => {})
     try {
-      await change()
+      if (!(await change())) return
       if (await check()) settle()
       await observed
     } finally {
@@ -162,14 +162,16 @@ export function setupManagement(ctx: Plugin.Context) {
     if (!output) return
     await reload(
       () =>
-        client.addProvider(
-          {
-            token: doc.token,
-            revision: doc.revision,
-            provider: { id, modelID, baseURL, protocol, context: Number(context), output: Number(output) },
-          },
-          options(),
-        ),
+        client
+          .addProvider(
+            {
+              token: doc.token,
+              revision: doc.revision,
+              provider: { id, modelID, baseURL, protocol, context: Number(context), output: Number(output) },
+            },
+            options(),
+          )
+          .then(() => true),
       async () =>
         (await ctx.client.model.list(options())).data.some((m) => m.providerID === id && m.id === modelID),
     )
@@ -282,17 +284,19 @@ export function setupManagement(ctx: Plugin.Context) {
       if (!mode) return
       await reload(
         () =>
-          client.saveSettings(
-            {
-              token: doc.token,
-              revision: doc.revision,
-              localModel: local,
-              cloudModel: cloud,
-              enabled: true,
-              ...(mode === "xcospan" ? { defaultAgent: true } : {}),
-            },
-            options(),
-          ),
+          client
+            .saveSettings(
+              {
+                token: doc.token,
+                revision: doc.revision,
+                localModel: local,
+                cloudModel: cloud,
+                enabled: true,
+                ...(mode === "xcospan" ? { defaultAgent: true } : {}),
+              },
+              options(),
+            )
+            .then((result) => result.changed),
         async () => {
           const next = await client.settings({ paths: [] }, options())
           return (
@@ -435,16 +439,18 @@ export function setupManagement(ctx: Plugin.Context) {
     if (action === "toggle") {
       await reload(
         () =>
-          client.saveSettings(
-            {
-              token: doc.token,
-              revision: doc.revision,
-              localModel: state.localModel!,
-              cloudModel: state.cloudModel!,
-              enabled: !state.enabled,
-            },
-            options(),
-          ),
+          client
+            .saveSettings(
+              {
+                token: doc.token,
+                revision: doc.revision,
+                localModel: state.localModel!,
+                cloudModel: state.cloudModel!,
+                enabled: !state.enabled,
+              },
+              options(),
+            )
+            .then((result) => result.changed),
         async () => {
           const next = await client.settings({ paths: [] }, options())
           return next.generation !== state.generation && next.enabled !== state.enabled

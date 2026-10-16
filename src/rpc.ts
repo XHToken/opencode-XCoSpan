@@ -21,7 +21,7 @@ export const XCoSpan = Rpc.define({
         generation: z.string(),
       }),
     },
-    saveSettings: { input: SettingsInput, errors, output: z.object({}) },
+    saveSettings: { input: SettingsInput, errors, output: z.object({ changed: z.boolean() }) },
     addProvider: {
       input: z.object({ token: z.string(), revision: z.string(), provider: CustomProvider }).strict(),
       errors,

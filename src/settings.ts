@@ -114,12 +114,14 @@ export class Settings {
         throw new ActionError("Another client changed the configuration; reload")
       const next = update(text, document)
       parseSettings(next)
+      if (next === text) return false
       const mode = (await stat(document.path)).mode
       await writeFile(temporary, next, { mode, flag: "wx" })
       if (hash(await readFile(document.path, "utf8")) !== revision)
         throw new ActionError("Configuration changed during save; reload")
       await rename(temporary, document.path)
       this.documents.delete(token)
+      return true
     } finally {
       locks.delete(document.path)
       await rm(temporary, { force: true })
@@ -127,7 +129,7 @@ export class Settings {
   }
   async save(input: z.infer<typeof SettingsInput>) {
     if (input.enabled) await this.validateModels(input)
-    await this.change(input.token, input.revision, (text, doc) => {
+    return this.change(input.token, input.revision, (text, doc) => {
       const item = parseSettings(text).plugins[doc.index]
       const options = typeof item === "string" ? {} : (item.options ?? {})
       const original = parseSettings(text)
