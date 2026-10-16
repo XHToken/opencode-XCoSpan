@@ -69,7 +69,11 @@ export const Config = z
   .strict()
 export type Config = z.infer<typeof Config>
 
-export const RouteResult = z.object({ cloud: z.boolean(), reason: z.string().min(1) }).strict()
+export const RouteDecision = z
+  .object({ reason: requiredText("Route reason"), route: z.union([z.literal(0), z.literal(1)]) })
+  .strict()
+// The algorithm contract is numeric; session state and execution use a named cloud flag.
+export const RouteResult = z.object({ cloud: z.boolean(), reason: requiredText("Route reason") }).strict()
 export const RedactionResult = z.object({ content: Content, changes: z.string() }).strict()
 
 export function parseCandidate(review: Review, candidate: unknown): Content | Task {

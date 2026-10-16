@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { RouteResult, RedactionResult, type Config, type Content } from "./types"
+import { RouteDecision, RedactionResult, type Config, type Content } from "./types"
 import type { Plugin } from "@opencode/plugin"
 import { ROUTE_INSTRUCTIONS, REDACT_INSTRUCTIONS } from "./prompts"
 
@@ -62,14 +62,20 @@ export function capabilities(config: Config, generate: Plugin.Context["generate"
     return response.text
   }
   return {
-    route: (input: RouteInput, signal?: AbortSignal) =>
-      config.routeURL
-        ? call(config.routeURL, input, RouteResult, config.routeKeyEnv, signal)
-        : generateText(
-            `${ROUTE_INSTRUCTIONS}\nOutput JSON Schema:${JSON.stringify(z.toJSONSchema(RouteResult))}`,
-            input,
-            signal,
-          ).then((text) => RouteResult.parse(JSON.parse(text))),
+    route: async (input: RouteInput, signal?: AbortSignal) => {
+      const decision = config.routeURL
+        ? await call(config.routeURL, input, RouteDecision, config.routeKeyEnv, signal)
+        : RouteDecision.parse(
+            JSON.parse(
+              await generateText(
+                `${ROUTE_INSTRUCTIONS}\nOutput JSON Schema:${JSON.stringify(z.toJSONSchema(RouteDecision))}`,
+                input,
+                signal,
+              ),
+            ),
+          )
+      return { cloud: decision.route === 1, reason: decision.reason }
+    },
     redact: async (content: Content, signal?: AbortSignal) => {
       if (config.redactURL)
         return call(config.redactURL, { content }, RedactionResult, config.redactKeyEnv, signal)

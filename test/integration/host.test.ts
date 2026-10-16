@@ -119,9 +119,9 @@ function completion(body: Request) {
     delta = {
       role: "assistant",
       content: JSON.stringify(body.messages).includes("NATIVE_ROUTE_CANCEL")
-        ? JSON.stringify({ cloud: false, reason: "Local task" })
+        ? JSON.stringify({ reason: "Local task", route: 0 })
         : JSON.stringify(body.messages).includes("NATIVE_ROUTE_CLOUD")
-          ? JSON.stringify({ cloud: true, reason: "Complex task" })
+          ? JSON.stringify({ reason: "Complex task", route: 1 })
           : "[PERSON] reviewed text",
     }
   } else if (body.model === "cloud" && cloudTool && !toolResults.length) {
@@ -314,8 +314,8 @@ beforeAll(async () => {
           await routeGate
         }
         return Response.json({
-          cloud: !body.query.includes("LOCAL_ONLY"),
           reason: "Fixture routing decision",
+          route: body.query.includes("LOCAL_ONLY") ? 0 : 1,
         })
       }
       if (path === "/redact") {
@@ -2006,7 +2006,7 @@ test("rejecting review stops delegation", async () => {
 
 test.each([
   { status: 503, body: { error: "Routing service unavailable" } },
-  { status: 200, body: { cloud: "invalid", reason: "Malformed route" } },
+  { status: 200, body: { reason: "Malformed route", route: "1" } },
 ])("routing failure prevents model execution: %j", async ({ status, body }) => {
   const before = requests.length
   fault = { path: "/route", status, body }
@@ -3619,7 +3619,8 @@ test.each([
         await until(
           async () =>
             screen().includes("XCoSpan · Current request") &&
-            screen().replace(/\s+/g, " ").includes("Cloud collaboration · Waiting for response")
+            screen().replace(/\s+/g, " ").includes("Cloud collaboration · Waiting for response") &&
+            screen().includes("Material reviews · 1/1 approved")
               ? true
               : undefined,
           "live sidebar",

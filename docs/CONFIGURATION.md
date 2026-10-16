@@ -43,12 +43,12 @@ POST routeURL
     skills: { name: string, description?: string }[]
   }
 }
--> { cloud: boolean, reason: string }
+-> { reason: string, route: 0 | 1 }
 ```
 
 `context` contains native session messages preceding the current query. `files` contains the current user message's native attachment descriptions. Their fields follow the supported OpenCode SDK types. `capabilities` is collected from the current host tool set, Skill discovery, and configured model roles; routing evaluates the task against that available setup.
 
-With `cloud=false`, the local role completes the task. With `cloud=true`, cloud collaboration is available. The local model selects materials, preparation steps, and delegation content from the task and context.
+`route=0` selects local execution; `route=1` selects cloud collaboration. The plugin maps this strict algorithm result to its internal `cloud` flag for session state and execution. The local model selects materials, preparation steps, and delegation content from the task and context.
 
 ## Redaction
 
@@ -67,6 +67,16 @@ Content =
 Image `data` contains the complete base64-encoded bytes. Output preserves the input content type. `changes` describes the transformation. The user reviews service output before it can be delegated.
 
 Both service URLs must use loopback addresses; redirects are rejected. Errors surface directly, and cancellation reaches the request. Originals, candidates, change descriptions, and approved revisions are stored in OpenCode plugin storage.
+
+## Built-in algorithm policy
+
+Routing evaluates the complete deliverable, the hardest necessary cognitive step, and a grounded verification path against the configured model and actual host capabilities. It handles the current query in its session context. Model identity, file format, domain, and task length do not impose fixed routes. Invalid JSON or an invalid decision stops the request.
+
+Text redaction covers direct and indirect identifiers, credentials, business entities, financial and contractual data, and identifying combinations. This policy includes contract amounts, payment percentages, and liability percentages. Every candidate is shown against its original; users can edit the candidate to retain facts needed for the delegated task. The local agent uses the reviewed version when preparing the final outbound task.
+
+The English prompts adapt the supplied routing procedure and the sensitive-data categories and policy from Privacy Gateway's `string_only` revision `6256c66fb869b40959d75cbfa29a3d4864294228`. The built-in implementation returns a complete text candidate through OpenCode's configured model provider. Privacy Gateway's Python runtime, regex and dictionary detectors, span-offset output, and replacement-map engine are outside this implementation. Its Python entry point requires an adapter to implement the optional HTTP service contract above.
+
+Prompt-based redaction remains model-generated and requires user review. Structural preservation, consistent placeholders, and complete coverage are instructions to the model, not deterministic guarantees. The original and reviewed candidate remain available in plugin storage for comparison. Material review and complete outbound approval are enforced by the plugin.
 
 ## Review and outbound content
 

@@ -92,12 +92,32 @@ beforeAll(async () => {
       const headers = new Headers(request.headers)
       headers.delete("host")
       headers.delete("content-length")
-      const response = await fetch(models[role].baseURL + endpoint + new URL(request.url).search, {
-        method: "POST",
-        headers,
-        body,
-        signal: request.signal,
-      })
+      let response: Response
+      try {
+        response = await fetch(models[role].baseURL + endpoint + new URL(request.url).search, {
+          method: "POST",
+          headers,
+          body,
+          signal: request.signal,
+        })
+      } catch (error) {
+        const failure = {
+          requestID,
+          role,
+          endpoint,
+          aborted: request.signal.aborted,
+          message: error instanceof Error ? error.message : String(error),
+        }
+        await writeFile(
+          join(artifactRoot, `transport-${requestID}-${role}.json`),
+          JSON.stringify(failure, null, 2),
+        )
+        console.error("Provider transport error", failure)
+        return Response.json(
+          { error: { type: "upstream_transport_error", message: failure.message } },
+          { status: 502 },
+        )
+      }
       if (!response.ok) console.error("Provider HTTP error", role, response.status)
       const writer = Bun.file(join(artifactRoot, `response-${requestID}-${role}.sse`)).writer()
       const stream = response.body?.pipeThrough(

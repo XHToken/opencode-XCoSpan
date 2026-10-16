@@ -16,7 +16,7 @@ test("model capabilities preserve configured model and caller cancellation witho
       expect(Object.keys(input as object).sort()).toEqual(["model", "prompt"])
       expect((input as { model: unknown }).model).toEqual(config.localModel)
       observed = options?.signal
-      return { text: JSON.stringify({ cloud: true, reason: "Needs analysis" }) }
+      return { text: JSON.stringify({ reason: "Needs analysis", route: 1 }) }
     },
   } as Plugin.Context["generate"]
   expect(config.timeoutMs).toBeUndefined()
@@ -48,6 +48,76 @@ test("malformed model output fails without replacing the route", async () => {
       capabilities: { localModel: config.localModel, cloudModel: config.cloudModel, tools: [], skills: [] },
     }),
   ).rejects.toThrow()
+})
+
+test.each([
+  { reason: "Available tools can compute and verify the result", route: 0 },
+  { reason: "The user requests cloud collaboration", route: 1 },
+])("model and service routing share the same numeric contract: %j", async (decision) => {
+  const input = {
+    query: "Current task",
+    context: [{ role: "user", text: "Prior task" }],
+    files: [],
+    capabilities: { localModel: config.localModel, cloudModel: config.cloudModel, tools: [], skills: [] },
+  }
+  const generate = {
+    async text(request: { prompt: string }) {
+      expect(request.prompt).toContain(JSON.stringify(input))
+      return { text: JSON.stringify(decision) }
+    },
+  } as Plugin.Context["generate"]
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      expect(await request.json()).toEqual(input)
+      return Response.json(decision)
+    },
+  })
+  try {
+    const expected = { cloud: decision.route === 1, reason: decision.reason }
+    expect(await capabilities(config, generate).route(input)).toEqual(expected)
+    expect(await capabilities({ ...config, routeURL: String(server.url) }, generate).route(input)).toEqual(
+      expected,
+    )
+  } finally {
+    server.stop(true)
+  }
+})
+
+test.each([
+  { reason: "Invalid route", route: "1" },
+  { reason: "Invalid route", route: true },
+  { reason: "Invalid route", route: 2 },
+  { reason: "Invalid route", route: 0.5 },
+  { reason: "   ", route: 0 },
+  { reason: "Unexpected property", route: 1, cloud: true },
+  { reason: "Missing numeric route", cloud: true },
+])("invalid algorithm decisions fail for model and service calls: %j", async (decision) => {
+  const generate = {
+    async text() {
+      return { text: JSON.stringify(decision) }
+    },
+  } as Plugin.Context["generate"]
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => Response.json(decision),
+  })
+  const input = {
+    query: "Task",
+    context: [],
+    files: [],
+    capabilities: { localModel: config.localModel, cloudModel: config.cloudModel, tools: [], skills: [] },
+  }
+  try {
+    await expect(capabilities(config, generate).route(input)).rejects.toThrow()
+    await expect(
+      capabilities({ ...config, routeURL: String(server.url) }, generate).route(input),
+    ).rejects.toThrow()
+  } finally {
+    server.stop(true)
+  }
 })
 
 test("remote redaction capability URLs are rejected before sending private content", () => {
