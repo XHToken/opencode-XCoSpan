@@ -80,7 +80,7 @@ Users review each model-generated candidate for sensitive-data coverage, documen
 
 ## Review and outbound content
 
-`redact` / `redact_image` return the approved material's review ID. `cloud_delegate` accepts `reviewIds`: the reviewed text handoff first, then approved supporting materials. The handoff contains the objective, relevant context, constraints, and requested output. The plugin assembles these approved contents into the complete candidate for final editing and confirmation. New model-authored instructions require a new material review.
+`redact` accepts a task handoff in `content` and optional `files` containing selected UTF-8 text. File reads use native read permissions before loading the complete local text; source paths stay local. The tool returns a compact approval receipt. `redact` / `redact_image` return the approved material's review ID. `cloud_delegate` accepts `reviewIds`: the reviewed text handoff first, then approved supporting materials. The handoff contains the objective, relevant context, constraints, and requested output. The plugin assembles these approved contents into the complete candidate for final editing and confirmation. New model-authored instructions require a new material review.
 
 Each save creates a new revision. Approval of the complete candidate starts the cloud task. Failure, rejection, or cancellation stops the pending send. Subsequent cloud requests include the approved task, its own execution history, and authorized tool results.
 

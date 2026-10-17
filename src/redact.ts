@@ -1,6 +1,8 @@
 import type { Plugin } from "@opencode/plugin"
 import type { ToolContext } from "@opencode/plugin/promise/tool"
 import { z } from "zod"
+import { readFile, realpath } from "node:fs/promises"
+import { resolve } from "node:path"
 import type { capabilities } from "./capabilities"
 import { PRIMARY_AGENT } from "./delegate"
 import type { Reviews } from "./review"
@@ -47,7 +49,7 @@ export async function registerRedaction(
     return {
       content:
         approved.type === "text"
-          ? JSON.stringify({ reviewId: reviewed.id, revision: reviewed.revision, text: approved.text })
+          ? JSON.stringify({ reviewId: reviewed.id, revision: reviewed.revision, status: "approved" })
           : [
               {
                 type: "text" as const,
@@ -70,11 +72,36 @@ export async function registerRedaction(
             .describe(
               "Original text to redact, including relevant context or extracted document/table text.",
             ),
+          files: z
+            .array(z.string().min(1))
+            .optional()
+            .describe(
+              "Local UTF-8 text files containing selected evidence or extracted document text. The plugin reads and includes their full contents; file paths stay local. Omit when all content is supplied inline.",
+            ),
         })
         .strict(),
       description:
-        "Submit selected original text to local redaction and user review. The tool identifies sensitive information, prepares the candidate and waits for user edits and approval. Returns the approved text and its reviewId for cloud_delegate.",
-      execute: (input, tool) => review({ type: "text", text: input.content }, tool),
+        "Submit selected original text to local redaction and user review. The tool identifies sensitive information, prepares the candidate and waits for user edits and approval. Accepts inline content and prepared UTF-8 text file paths. Returns an approval receipt with reviewId for cloud_delegate; approved text remains in the review record.",
+      async execute(input, tool) {
+        if (tool.agent !== PRIMARY_AGENT) throw new Error("Redaction is available to the xcospan agent")
+        const signal = AbortSignal.any([tool.signal, lifetime])
+        const texts = [input.content]
+        if (input.files?.length) {
+          const read = (await ctx.tool.list()).find((item) => item.id === "read")
+          if (!read) throw new Error("Native read tool is unavailable")
+          for (const [index, file] of input.files.entries()) {
+            signal.throwIfAborted()
+            const path = await realpath(resolve(ctx.location.directory, file))
+            await tool.progress({ title: "Reading selected material", material: index + 1 })
+            // Native read applies file and external-directory permissions before local bytes are loaded.
+            const result = await read.execute({ path, limit: 1 }, { ...tool, signal })
+            z.object({ type: z.literal("text-page") }).parse(result.output)
+            const bytes = await readFile(path, { signal })
+            texts.push(`Material ${index + 1}\n${new TextDecoder("utf-8", { fatal: true }).decode(bytes)}`)
+          }
+        }
+        return review({ type: "text", text: texts.join("\n\n") }, tool)
+      },
     })
     if (!imageEnabled) return
     editor.add({

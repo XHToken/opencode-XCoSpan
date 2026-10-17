@@ -18,6 +18,7 @@ type Request = {
 }
 const requests: Request[] = []
 const routes: unknown[] = []
+const redactionInputs: unknown[] = []
 const correctedCloudQuery = "Research after credential correction"
 let routeGate: Promise<void> | undefined
 let releaseRoute: (() => void) | undefined
@@ -340,6 +341,7 @@ beforeAll(async () => {
       }
       if (path === "/redact") {
         const body = (await request.json()) as { content: { type: string; text?: string } }
+        redactionInputs.push(body)
         if (redactionGate) {
           redactionStarted = true
           request.signal.addEventListener(
@@ -1540,7 +1542,10 @@ test("native local loop routes each query without cloud requests", async () => {
       "Route: cloud=false",
     )
   expect(routes.slice(routed)).toHaveLength(2)
-  for (const route of routes.slice(routed))
+  for (const route of routes.slice(routed)) {
+    expect(
+      (route as { capabilities: { tools: { name: string }[] } }).capabilities.tools.map((tool) => tool.name),
+    ).not.toContain("cloud_delegate")
     expect(route).toMatchObject({
       capabilities: {
         localModel: { providerID: "fixture", id: "local" },
@@ -1552,6 +1557,7 @@ test("native local loop routes each query without cloud requests", async () => {
         skills: expect.arrayContaining([expect.objectContaining({ name: "xcospan-materials" })]),
       },
     })
+  }
   expect(requests.slice(before).filter((request) => request.model === "cloud")).toHaveLength(0)
   if ((await client.session.get({ sessionID: session.id })).outcome !== "succeeded")
     console.log(
@@ -4856,5 +4862,95 @@ test.each(["redaction", "outbound"] as const)(
     expect((await client.session.get({ sessionID: session.id })).outcome).toBe("succeeded")
     await rpc.cancel(pick(cancelled!), { location })
     expect((await client.session.get({ sessionID: session.id })).outcome).toBe("succeeded")
+  },
+)
+
+test("text file references preserve complete material behind native permissions and compact receipts", async () => {
+  const file = join(location.directory, "selected material.txt")
+  const text = "SOURCE_BEGIN\n" + "x".repeat(10000) + "\n" + "evidence row\n".repeat(5000) + "SOURCE_END"
+  await writeFile(file, text)
+  const before = requests.length
+  const inputCount = redactionInputs.length
+  const session = await client.session.create({
+    location,
+    agent: "xcospan",
+    permissions: [{ action: "read", resource: "*", effect: "allow" }],
+  })
+  const rpc = client.rpc(XCoSpan)
+  localProbeTools = [{ name: "redact", input: { content: "Assess selected evidence", files: [file] } }]
+  try {
+    await client.session.prompt({ sessionID: session.id, text: "Review selected evidence" })
+    for (const kind of ["redaction", "outbound"]) {
+      const review = await until(
+        async () =>
+          (await rpc.list({ sessionID: session.id }, { location })).reviews.find(
+            (item) => item.kind === kind && item.status === "pending",
+          ),
+        kind,
+      )
+      expect(requests.slice(before).filter((request) => request.model === "cloud")).toHaveLength(0)
+      if (kind === "redaction")
+        expect(review.original).toEqual({
+          type: "text",
+          text: "Assess selected evidence\n\nMaterial 1\n" + text,
+        })
+      await rpc.approve({ id: review.id, sessionID: session.id, revision: review.revision }, { location })
+    }
+    await client.session.wait({ sessionID: session.id })
+    expect(redactionInputs.slice(inputCount)).toEqual([
+      { content: { type: "text", text: "Assess selected evidence\n\nMaterial 1\n" + text } },
+    ])
+    expect((await rpc.list({ sessionID: session.id }, { location })).runs[0]?.status).toBe("completed")
+    const history = await client.session.context({ sessionID: session.id })
+    const call = history
+      .flatMap((message) => (message.type === "assistant" ? message.content : []))
+      .find((part) => part.type === "tool" && part.name === "redact")
+    expect(call).toMatchObject({ state: { status: "completed" } })
+    const outboundRequests = JSON.stringify(requests.slice(before))
+    expect(outboundRequests).not.toContain("SOURCE_END")
+    const toolMessages = requests
+      .slice(before)
+      .filter((request) => request.model === "local")
+      .flatMap((request) => request.messages.filter((message) => message.role === "tool"))
+    expect(JSON.stringify(toolMessages)).toContain("reviewId")
+    expect(JSON.stringify(toolMessages)).not.toContain("needs industry research")
+  } finally {
+    localProbeTools = undefined
+    await client.session.interrupt({ sessionID: session.id, resume: false })
+  }
+})
+
+test.each(["read", "external_directory"])(
+  "text references honor native %s denial before redaction",
+  async (action) => {
+    const file = join(action === "read" ? location.directory : root, "denied-material.txt")
+    await writeFile(file, "DENIED_SOURCE_SENTINEL")
+    const before = redactionInputs.length
+    const session = await client.session.create({
+      location,
+      agent: "xcospan",
+      permissions: [
+        { action: "*", resource: "*", effect: "allow" },
+        { action, resource: "*", effect: "deny" },
+      ],
+    })
+    localProbeTools = [{ name: "redact", input: { content: "Assess selected evidence", files: [file] } }]
+    try {
+      await client.session.prompt({ sessionID: session.id, text: "Review material" })
+      await client.session.wait({ sessionID: session.id })
+      expect(redactionInputs).toHaveLength(before)
+      const state = await client.rpc(XCoSpan).list({ sessionID: session.id }, { location })
+      expect(state.reviews).toHaveLength(0)
+      expect(state.runs).toHaveLength(0)
+      const history = await client.session.context({ sessionID: session.id })
+      const calls = history
+        .flatMap((message) => (message.type === "assistant" ? message.content : []))
+        .filter((part) => part.type === "tool" && part.name === "redact")
+      expect(calls[0]).toMatchObject({ state: { status: "error" } })
+      expect(JSON.stringify(history)).not.toContain("DENIED_SOURCE_SENTINEL")
+    } finally {
+      localProbeTools = undefined
+      await client.session.interrupt({ sessionID: session.id, resume: false })
+    }
   },
 )

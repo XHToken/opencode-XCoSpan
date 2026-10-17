@@ -707,7 +707,7 @@ test.each(["redaction", "outbound", "cloud"] as const)(
     try {
       await client.session.prompt({
         sessionID: session.id,
-        text: "Use cloud collaboration to research public sources and compare fixed-quantity, periodic, and just-in-time replenishment strategies for manufacturers. Explain their applicability and risks.",
+        text: "Use cloud collaboration to briefly compare a shared queue and individual assignment for a small support team. This is a conceptual task using only this request; no workspace files or external research are needed.",
       })
       const result = await until(async () => {
         const state = await rpc.list({ sessionID: session.id }, options)
@@ -1398,5 +1398,207 @@ test("real models compose reviewed collaboration without operator repair", async
       join(artifactRoot, "unrepaired-session.json"),
       JSON.stringify(await client.session.context({ sessionID: session.id }), null, 2),
     )
+  }
+}, 1860000)
+
+test("real workflow matrix preserves review and delivery across six consecutive requests", async () => {
+  const options = { location: { directory } }
+  const session = await client.session.create({
+    ...options,
+    agent: "xcospan",
+    permissions: ["read", "edit", "shell", "skill"].map((action) => ({
+      action,
+      resource: "*",
+      effect: "allow" as const,
+    })),
+  })
+  const rpc = client.rpc(XCoSpan)
+  await writeFile(
+    join(directory, "service-notes.md"),
+    "# Service observations\nLogin requests sometimes wait during peak traffic. Password reset emails can arrive late. Support requests lack consistent ownership.\nContact: Avery Stone, avery.stone@example.test.\n",
+  )
+  await writeFile(
+    join(directory, "handoff.csv"),
+    "Stage,Observation\nIntake,Requests arrive through several channels\nAssignment,Ownership is unclear\nClosure,Resolution notes are inconsistent\n",
+  )
+  const cases = [
+    {
+      name: "local-start",
+      cloud: false,
+      query: "Respond locally with a brief greeting. No research or cloud collaboration is needed.",
+    },
+    {
+      name: "text-collaboration",
+      cloud: true,
+      query:
+        "Use cloud collaboration to briefly compare a shared queue and individual assignment for a small support team. This is a conceptual question; public research is unnecessary.",
+    },
+    {
+      name: "markdown-collaboration",
+      cloud: true,
+      query:
+        "Use cloud collaboration to suggest a short improvement plan based on service-notes.md. Prepare the relevant material and protect contact details before sharing. No public research is needed.",
+    },
+    {
+      name: "csv-collaboration",
+      cloud: true,
+      query:
+        "Use cloud collaboration to propose an owner and a practical completion check for each stage in handoff.csv. Use the supplied observations; no external research is required.",
+    },
+    {
+      name: "context-followup",
+      cloud: true,
+      query:
+        "Use cloud collaboration again to turn the previous proposal into a short rollout checklist for that same team. Use the relevant conversation context; no external research is needed.",
+    },
+    {
+      name: "local-return",
+      cloud: false,
+      query: "Now calculate 137 times 29 locally and give a brief answer. No cloud collaboration is needed.",
+    },
+  ]
+  const evidence: unknown[] = []
+  const failures: string[] = []
+  try {
+    for (const scenario of cases) {
+      const started = Date.now()
+      const requestStart = records.length
+      const before = await rpc.list({ sessionID: session.id }, options)
+      const previousIdle = (await client.session.get({ sessionID: session.id })).time.idle
+      let failure: string | undefined
+      const reviewEdits: { reviewID: string; correctedIdentifiers: number }[] = []
+      try {
+        await client.session.prompt({ sessionID: session.id, text: scenario.query })
+        const state = await until(async () => {
+          const state = await rpc.list({ sessionID: session.id }, options)
+          await writeFile(
+            join(artifactRoot, "workflow-matrix-current.json"),
+            JSON.stringify({ scenario: scenario.name, sessionID: session.id, state }, null, 2),
+          )
+          for (const review of state.reviews.filter((item) => item.status === "pending")) {
+            expect(scenario.cloud).toBe(true)
+            expect(records.slice(requestStart).filter((request) => request.role === "cloud")).toHaveLength(0)
+            let approved = review
+            if (review.kind === "redaction") {
+              const candidate = review.candidate as { type: "text"; text: string }
+              let text = candidate.text
+              let correctedIdentifiers = 0
+              // Simulate an explicit reviewer edit of this synthetic fixture; production redaction stays model-driven.
+              for (const secret of ["Avery Stone", "avery.stone@example.test"]) {
+                if (text.includes(secret)) correctedIdentifiers++
+                text = text.replaceAll(secret, "[REVIEWED_IDENTIFIER]")
+              }
+              if (correctedIdentifiers) {
+                approved = await rpc.edit(
+                  {
+                    id: review.id,
+                    sessionID: session.id,
+                    revision: review.revision,
+                    candidate: { ...candidate, text },
+                  },
+                  options,
+                )
+                reviewEdits.push({ reviewID: review.id, correctedIdentifiers })
+              }
+            }
+            for (const secret of [
+              "Avery Stone",
+              "avery.stone@example.test",
+              "PRIVATE_WORKSPACE_SENTINEL",
+              directory,
+            ])
+              expect(JSON.stringify(approved.candidate)).not.toContain(secret)
+            await rpc.approve(
+              { id: approved.id, sessionID: session.id, revision: approved.revision },
+              options,
+            )
+          }
+          const status = await client.session.get({ sessionID: session.id })
+          if (status.time.idle === undefined || status.time.idle === previousIdle) return undefined
+          if (status.outcome === "failed" || status.outcome === "interrupted")
+            throw new Error(`Workflow ${status.outcome}`)
+          return status.outcome === "succeeded" ? state : undefined
+        }, scenario.name)
+        const runs = state.runs.filter((run) => !before.runs.some((old) => old.id === run.id))
+        const reviews = state.reviews.filter((review) => !before.reviews.some((old) => old.id === review.id))
+        const cloud = records.slice(requestStart).filter((request) => request.role === "cloud")
+        if (scenario.cloud) {
+          expect(runs.length).toBeGreaterThan(0)
+          expect(runs.every((run) => run.status === "completed")).toBe(true)
+          expect(cloud.length).toBeGreaterThan(0)
+          for (const kind of ["redaction", "outbound"])
+            expect(reviews.some((review) => review.kind === kind && review.status === "approved")).toBe(true)
+          const history = await client.session.context({ sessionID: session.id })
+          const tools = history
+            .flatMap((message) => (message.type === "assistant" ? message.content : []))
+            .filter((part) => part.type === "tool")
+          for (const run of runs)
+            expect(tools.find((part) => part.type === "tool" && part.id === run.callID)).toMatchObject({
+              state: { status: "completed" },
+            })
+          for (const secret of [
+            "Avery Stone",
+            "avery.stone@example.test",
+            "PRIVATE_WORKSPACE_SENTINEL",
+            directory,
+          ])
+            expect(JSON.stringify(cloud)).not.toContain(secret)
+        } else {
+          expect(cloud).toHaveLength(0)
+          expect(reviews).toHaveLength(0)
+          expect(runs).toHaveLength(0)
+        }
+      } catch (error) {
+        failure = error instanceof Error ? error.message : String(error)
+        failures.push(`${scenario.name}: ${failure}`)
+        await client.session.interrupt({ sessionID: session.id, resume: false })
+      }
+      const history = await client.session.context({ sessionID: session.id })
+      const current = history.slice(history.findLastIndex((message) => message.type === "user"))
+      const last = current.findLast((message) => message.type === "assistant")
+      const answer =
+        last?.type === "assistant"
+          ? last.content
+              .filter((part) => part.type === "text")
+              .map((part) => part.text)
+              .join("\n")
+          : ""
+      const tools = current
+        .flatMap((message) => (message.type === "assistant" ? message.content : []))
+        .filter((part) => part.type === "tool")
+      const record = {
+        scenario: scenario.name,
+        sessionID: session.id,
+        elapsedMs: Date.now() - started,
+        workflow: failure ? "failed" : "passed",
+        route: (await client.session.get({ sessionID: session.id })).metadata?.xcospanRoute,
+        failure,
+        reviewEdits,
+        requests: {
+          local: records.slice(requestStart).filter((request) => request.role === "local").length,
+          cloud: records.slice(requestStart).filter((request) => request.role === "cloud").length,
+        },
+        tools: tools.map((part) => ({ name: part.name, status: part.state.status })),
+        fileReferenceCalls: tools.filter(
+          (part) =>
+            part.name === "redact" &&
+            part.state.status !== "streaming" &&
+            Array.isArray(part.state.input.files) &&
+            part.state.input.files.length > 0,
+        ).length,
+        answer,
+        qualityObservation:
+          scenario.name === "local-return"
+            ? { expectedArithmetic: "3973", observedExpectedValue: answer.includes("3973") }
+            : undefined,
+      }
+      evidence.push(record)
+      await writeFile(join(artifactRoot, "workflow-matrix.json"), JSON.stringify(evidence, null, 2))
+      await writeFile(join(artifactRoot, "workflow-matrix-session.json"), JSON.stringify(history, null, 2))
+      console.log("Workflow scenario", scenario.name, record.workflow, record.elapsedMs, "ms")
+    }
+    expect(failures).toEqual([])
+  } finally {
+    await client.session.interrupt({ sessionID: session.id, resume: false })
   }
 }, 1860000)

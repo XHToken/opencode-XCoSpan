@@ -45,9 +45,11 @@ TUI <-- native session and tool events
 ## Execution invariants
 
 - Routing is associated with the user message ID. Tool rounds within one request reuse its decision. Inputs include the current tool descriptions, discovered Skills, and configured model roles. The current query is sent in full. Routing history contains up to three prior user turns, each with the user text and last assistant text, capped at 600 Unicode characters per entry with an explicit truncation flag. Historical reasoning and tool payloads are excluded. The parent agent retains its full native context.
+- Routing receives the local execution tool catalog; cloud delegation is excluded from local capability assessment.
 - Tool registration follows configured capabilities. Image redaction is exposed when a local redaction service is configured; routing reads the resulting tool set.
 - The materials Skill defines selection and verification guidance. A small helper delegates format detection and extraction to Xberg's registry, retaining source hashes, pages, tables, and warnings. Its optional `--text-output` writes complete extracted text with readable line breaks to a new local file. The model chooses when to use extraction, OCR, spreadsheet calculation, or visual inspection.
 - The model sees `cloud_delegate` after the current query is routed to cloud collaboration and its latest material review completes. Execution rechecks the route, review ownership, and approval state.
+- Prepared text files can be referenced by `redact.files`; native read and external-directory permissions apply. Full source text and approved text stay in review storage instead of being copied into tool arguments and approval results.
 - The model prepares task instructions and evidence through material review. `cloud_delegate` accepts only approved review IDs; the plugin uses the first reviewed text as task instructions and attaches the remaining reviewed materials. Final confirmation displays the complete candidate and supports user edits.
 - Approval binds the session, tool call, and candidate revision. Cloud delegation receives approved content.
 - Tool inputs, results, and persistent records remain associated. Recovery does not rerun completed work.

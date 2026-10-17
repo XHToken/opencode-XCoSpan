@@ -111,10 +111,9 @@ export function withRouting(plugin: {
                         capabilities: {
                           localModel: config.localModel,
                           cloudModel: config.cloudModel,
-                          tools: Object.entries(event.tools).map(([name, tool]) => ({
-                            name,
-                            description: tool.description,
-                          })),
+                          tools: Object.entries(event.tools)
+                            .filter(([name]) => name !== "cloud_delegate")
+                            .map(([name, tool]) => ({ name, description: tool.description })),
                           skills: skills.data.map(({ name, description }) => ({ name, description })),
                         },
                       },
