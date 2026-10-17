@@ -8,7 +8,7 @@
 - Capability-based routing and text redaction through English model instructions.
 - Text and optional image redaction review, editable outbound approval, and version-bound delegation.
 - Reviewed task handoffs and reference-only delegation arguments; the local model submits task instructions for review before selecting approved content for cloud collaboration.
-- State-aware tool exposure and routing context without prior reasoning traces.
+- State-aware tool exposure and compact routing context containing excerpts from the three most recent user turns.
 - Progress, cancellation, recovery, and result delivery through OpenCode sessions.
 - Collaboration stages restore from persisted task and review records when a terminal connects or reconnects.
 - User cancellation stops the active task and concurrent reviews; subsequent requests start normally.

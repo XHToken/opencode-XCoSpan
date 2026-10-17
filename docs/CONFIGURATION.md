@@ -92,3 +92,7 @@ Each save creates a new revision. Approval of the complete candidate starts the 
 - Persistent associations recover delivery of completed cloud results. Repeated recovery is idempotent.
 
 See [SECURITY.md](../SECURITY.md) for data-access and deployment boundaries.
+
+## Routing conversation context
+
+Each new user query receives its own routing decision. Tool rounds within that query reuse the decision. The router receives the complete current query and up to three recent user turns, with the user text and last assistant text from each turn. Each historical entry contains at most 600 Unicode characters and a `truncated` flag. Historical tool output and reasoning are omitted. Current attachments and the available capability descriptions accompany the query. The parent agent keeps its full native context.

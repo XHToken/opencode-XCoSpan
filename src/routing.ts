@@ -7,6 +7,7 @@ import { fromPromise } from "@opencode/plugin/promise/adapter"
 import { capabilities } from "./capabilities"
 import { PRIMARY_AGENT } from "./delegate"
 import { Config, RouteResult } from "./types"
+import { routingHistory } from "./routing-history"
 
 export interface Lifecycle {
   sessions: Set<string>
@@ -105,14 +106,7 @@ export function withRouting(plugin: {
                     service.route(
                       {
                         query: user.text,
-                        context: history.slice(0, history.indexOf(user)).map((message) =>
-                          message.type === "assistant"
-                            ? {
-                                ...message,
-                                content: message.content.filter((part) => part.type !== "reasoning"),
-                              }
-                            : message,
-                        ),
+                        context: routingHistory(history.slice(0, history.indexOf(user))),
                         files: user.files ?? [],
                         capabilities: {
                           localModel: config.localModel,

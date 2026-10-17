@@ -1586,8 +1586,11 @@ test("queued queries route separately with the completed local context", async (
       "LOCAL_ONLY first queued task",
       "LOCAL_ONLY second queued task",
     ])
-    expect(JSON.stringify(inputs[0]?.context)).not.toContain("LOCAL_RESULT")
-    expect(JSON.stringify(inputs[1]?.context)).toContain("LOCAL_RESULT")
+    expect(inputs[0]?.context).toEqual([])
+    expect(inputs[1]?.context).toEqual([
+      { role: "user", text: "LOCAL_ONLY first queued task", truncated: false },
+      { role: "assistant", text: "LOCAL_RESULT", truncated: false },
+    ])
     const history = await client.session.context({ sessionID: session.id })
     const user = history.findLast((message) => message.type === "user")
     expect(user).toMatchObject({ text: "LOCAL_ONLY second queued task" })
