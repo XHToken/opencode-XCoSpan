@@ -5,28 +5,35 @@ type History = Effect.Success<ReturnType<Plugin.Context["session"]["context"]>>
 export type RoutingMessage = { role: "user" | "assistant"; text: string; truncated: boolean }
 
 const RECENT_TURNS = 3
-const TEXT_CHARACTERS = 600
+const TEXT_CHARACTERS = 500
+const HISTORY_CHARACTERS = 1000
 
 export function routingHistory(history: History): RoutingMessage[] {
   const turns: RoutingMessage[][] = []
-  function excerpt(role: RoutingMessage["role"], text: string): RoutingMessage {
-    const characters = Array.from(text)
-    return {
-      role,
-      text: characters.slice(0, TEXT_CHARACTERS).join(""),
-      truncated: characters.length > TEXT_CHARACTERS,
-    }
-  }
   for (const message of history) {
     if (message.type === "user") {
-      turns.push([excerpt("user", message.text)])
+      turns.push([{ role: "user", text: message.text, truncated: false }])
       if (turns.length > RECENT_TURNS) turns.shift()
     } else if (message.type === "assistant") {
       const turn = turns.at(-1)
       if (!turn) continue
       const text = message.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n")
-      if (text.trim()) turn[1] = excerpt("assistant", text)
+      if (text.trim()) turn[1] = { role: "assistant", text, truncated: false }
     }
   }
-  return turns.flat()
+  let remaining = HISTORY_CHARACTERS
+  const selected: RoutingMessage[][] = []
+  for (const turn of turns.reverse()) {
+    const entries: RoutingMessage[] = []
+    for (const entry of turn) {
+      if (!remaining) break
+      const characters = Array.from(entry.text)
+      const text = characters.slice(0, Math.min(TEXT_CHARACTERS, remaining))
+      entries.push({ ...entry, text: text.join(""), truncated: text.length < characters.length })
+      remaining -= text.length
+    }
+    if (entries.length) selected.unshift(entries)
+    if (!remaining) break
+  }
+  return selected.flat()
 }

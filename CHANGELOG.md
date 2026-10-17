@@ -9,7 +9,7 @@
 - Text and optional image redaction review, editable outbound approval, and version-bound delegation.
 - Text material references and compact approval receipts reduce repeated content in the local model context.
 - Reviewed task handoffs and reference-only delegation arguments; the local model submits task instructions for review before selecting approved content for cloud collaboration.
-- State-aware tool exposure and compact routing context containing excerpts from the three most recent user turns.
+- State-aware tool exposure and routing history limited to 1,000 Unicode characters across up to three recent user turns.
 - Progress, cancellation, recovery, and result delivery through OpenCode sessions.
 - Collaboration stages restore from persisted task and review records when a terminal connects or reconnects.
 - User cancellation stops the active task and concurrent reviews; subsequent requests start normally.

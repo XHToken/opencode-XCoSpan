@@ -45,14 +45,39 @@ test("routing history keeps the last assistant text and excludes execution paylo
   expect(JSON.stringify(messages)).toBe(before)
 })
 
-test("routing excerpts are bounded and explicitly marked without splitting Unicode characters", () => {
-  const text = "🙂".repeat(601)
-  const messages = Array.from({ length: 4 }, () => [user(text), assistant(text)]).flat()
+test("routing history shares a 1000-character budget and prioritizes the latest turn", () => {
+  const messages = [
+    user("Older request"),
+    assistant("Older result"),
+    user("\u{1f642}".repeat(601)),
+    assistant("\u754c".repeat(601)),
+  ]
+  const before = JSON.stringify(messages)
   const result = project(messages)
-  expect(result).toHaveLength(6)
-  expect(result.every((entry) => entry.truncated && entry.text === "🙂".repeat(600))).toBe(true)
-  expect(result.reduce((length, entry) => length + Array.from(entry.text).length, 0)).toBe(3600)
-  expect(project([user("a".repeat(600))])[0]?.truncated).toBe(false)
+  expect(result).toEqual([
+    { role: "user", text: "\u{1f642}".repeat(500), truncated: true },
+    { role: "assistant", text: "\u754c".repeat(500), truncated: true },
+  ])
+  expect(result.reduce((length, entry) => length + Array.from(entry.text).length, 0)).toBe(1000)
+  expect(JSON.stringify(messages)).toBe(before)
+})
+
+test("unused recent-turn budget retains older context in chronological order", () => {
+  expect(
+    project([
+      user("a".repeat(500)),
+      assistant("b".repeat(500)),
+      user("c".repeat(100)),
+      assistant("d".repeat(100)),
+    ]),
+  ).toEqual([
+    { role: "user", text: "a".repeat(500), truncated: false },
+    { role: "assistant", text: "b".repeat(300), truncated: true },
+    { role: "user", text: "c".repeat(100), truncated: false },
+    { role: "assistant", text: "d".repeat(100), truncated: false },
+  ])
+  expect(project([user("a".repeat(500))])[0]?.truncated).toBe(false)
+  expect(project([user("a".repeat(501))])[0]?.truncated).toBe(true)
 })
 
 test("routing history permits empty history and unfinished prior turns", () => {

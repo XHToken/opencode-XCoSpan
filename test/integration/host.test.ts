@@ -1569,6 +1569,34 @@ test("native local loop routes each query without cloud requests", async () => {
   expect((await client.session.get({ sessionID: session.id })).outcome).toBe("succeeded")
 })
 
+test("native routing caps total history while preserving the complete current query", async () => {
+  const start = routes.length
+  const session = await client.session.create({ location, agent: "xcospan" })
+  const queries = ["LOCAL_ONLY older ", "LOCAL_ONLY recent ", "LOCAL_ONLY current "].map(
+    (prefix) => prefix + "x".repeat(2000),
+  )
+  for (const text of queries) {
+    await client.session.prompt({ sessionID: session.id, text })
+    await client.session.wait({ sessionID: session.id })
+  }
+  const inputs = routes.slice(start) as {
+    query: string
+    context: { role: string; text: string; truncated: boolean }[]
+  }[]
+  expect(inputs.map((input) => input.query)).toEqual(queries)
+  expect(inputs[0]!.context).toEqual([])
+  for (const input of inputs)
+    expect(
+      input.context.reduce((count, entry) => count + Array.from(entry.text).length, 0),
+    ).toBeLessThanOrEqual(1000)
+  expect(inputs[2]!.context.reduce((count, entry) => count + Array.from(entry.text).length, 0)).toBe(1000)
+  expect(inputs[2]!.context.findLast((entry) => entry.role === "user")).toMatchObject({
+    text: queries[1]!.slice(0, 500),
+    truncated: true,
+  })
+  expect((await client.session.get({ sessionID: session.id })).outcome).toBe("succeeded")
+})
+
 test("queued queries route separately with the completed local context", async () => {
   routeGate = new Promise<void>((resolve) => {
     releaseRoute = resolve
