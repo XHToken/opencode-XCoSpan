@@ -3,7 +3,7 @@ import type { Media } from "@opencode/ai"
 import type { SessionContext } from "@opencode/plugin/promise/session"
 import type { Delegations } from "./delegate"
 import { CLOUD_AGENT, CLOUD_TOOLS, PRIMARY_AGENT, taskPrompt } from "./delegate"
-import { CLOUD_INSTRUCTIONS } from "./prompts"
+import { CLOUD_INSTRUCTIONS, COLLABORATION_INSTRUCTIONS } from "./prompts"
 import { Task, RouteResult, imageURI, type Config } from "./types"
 import type { Reviews } from "./review"
 import { currentRedactionID } from "./redact"
@@ -38,15 +38,21 @@ export async function registerContext(
           route.messageID === user?.id &&
           "result" in route &&
           RouteResult.parse(route.result).cloud
+        if (cloud) event.system.push({ type: "text", text: COLLABORATION_INSTRUCTIONS })
         const reviewID = currentRedactionID(history)
         const review = reviewID ? await reviews.get(reviewID, event.sessionID) : undefined
-        if (!cloud || review?.kind !== "redaction" || review.status !== "approved") {
+        if (!cloud) {
           delete event.tools.cloud_delegate
-          if (cloud)
-            event.system.push({
-              type: "text",
-              text: "Cloud preparation: submit the relevant task context and selected evidence through the directly callable redact or redact_image tool for review. Direct function tools are available independently of the Code Mode catalog; invoke them through their advertised tool schema. cloud_delegate becomes available after review approval.",
-            })
+        } else if (review?.kind !== "redaction" || review.status !== "approved") {
+          event.system.push({
+            type: "text",
+            text: "Cloud preparation: redact or redact_image prepares material and waits for user review. cloud_delegate is available and requires the resulting approved reviewIds. Submit the task handoff and selected evidence for review first. These tools are directly callable through their advertised schemas.",
+          })
+        } else {
+          event.system.push({
+            type: "text",
+            text: `Current approved material reference: ${JSON.stringify({ reviewId: review.id, revision: review.revision })}. When delegation is needed, cloud_delegate accepts reviewIds only. The plugin loads the exact reviewed contents and presents the complete outbound candidate for approval. Include this reviewId and any other approved supporting material IDs needed for the current task.`,
+          })
         }
       }
       return

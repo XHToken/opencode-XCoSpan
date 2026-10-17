@@ -40,7 +40,7 @@ TUI <-- native session and tool events
 
 ## Model guidance
 
-`src/prompts.ts` defines the coordinator and cloud worker's system instructions. They describe outcomes, material sufficiency, review continuity, delegation requirements, and evidence-based completion. The model chooses its tools and working sequence from the task and available capabilities. The routing hook adds the current query's decision; relevant Skills provide on-demand operational guidance. Tool execution and persistent state enforce approval, permissions, cancellation, and delivery.
+`src/prompts.ts` defines the coordinator and cloud worker's system instructions. They describe outcomes, material sufficiency, review continuity, delegation requirements, and evidence-based completion. The model chooses its tools and working sequence from the task and available capabilities. The routing hook adds the current query's decision. Collaboration preparation guidance is injected for cloud-routed requests. After material approval, the context hook supplies the current review ID and the ID-only delegation contract. Relevant Skills provide on-demand operational guidance. Tool execution and persistent state enforce approval, permissions, cancellation, and delivery.
 
 ## Execution invariants
 
@@ -48,7 +48,7 @@ TUI <-- native session and tool events
 - Routing receives the local execution tool catalog; cloud delegation is excluded from local capability assessment.
 - Tool registration follows configured capabilities. Image redaction is exposed when a local redaction service is configured; routing reads the resulting tool set.
 - The materials Skill defines selection and verification guidance. A small helper delegates format detection and extraction to Xberg's registry, retaining source hashes, pages, tables, and warnings. Its optional `--text-output` writes complete extracted text with readable line breaks to a new local file. The model chooses when to use extraction, OCR, spreadsheet calculation, or visual inspection.
-- The model sees `cloud_delegate` after the current query is routed to cloud collaboration and its latest material review completes. Execution rechecks the route, review ownership, and approval state.
+- The model sees `cloud_delegate` throughout a cloud-routed request, including preparation. Its arguments reference approved materials. Execution checks the route, review ownership, and approval state before creating an outbound candidate; incomplete or failed review prevents delegation.
 - Prepared text files can be referenced by `redact.files`; native read and external-directory permissions apply. Full source text and approved text stay in review storage instead of being copied into tool arguments and approval results.
 - The model prepares task instructions and evidence through material review. `cloud_delegate` accepts only approved review IDs; the plugin uses the first reviewed text as task instructions and attaches the remaining reviewed materials. Final confirmation displays the complete candidate and supports user edits.
 - Approval binds the session, tool call, and candidate revision. Cloud delegation receives approved content.

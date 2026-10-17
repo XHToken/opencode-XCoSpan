@@ -1537,10 +1537,13 @@ test("native local loop routes each query without cloud requests", async () => {
   expect(JSON.stringify(history.filter((message) => message.type === "user"))).not.toContain("<xcospan-route")
   const localRequests = requests.slice(before).filter((request) => request.model === "local")
   expect(localRequests.length).toBeGreaterThan(0)
-  for (const request of localRequests)
-    expect(JSON.stringify(request.messages.filter((message) => message.role === "system"))).toContain(
-      "Route: cloud=false",
-    )
+  for (const request of localRequests) {
+    const system = JSON.stringify(request.messages.filter((message) => message.role === "system"))
+    expect(system).toContain("Route: cloud=false")
+    expect(system).not.toContain("Prepare sufficient materials")
+    expect(system).not.toContain("Current approved material reference")
+    expect(request.tools?.map((tool) => tool.function.name)).not.toContain("cloud_delegate")
+  }
   expect(routes.slice(routed)).toHaveLength(2)
   for (const route of routes.slice(routed)) {
     expect(
@@ -1819,7 +1822,7 @@ test("redaction edit and outbound edit reach only the approved native child", as
   const redaction = await pending("redaction")
   expect(requests.slice(before).filter((request) => request.model === "cloud")).toHaveLength(0)
   for (const request of requests.slice(before))
-    expect(request.tools?.map((tool) => tool.function.name) ?? []).not.toContain("cloud_delegate")
+    expect(request.tools?.map((tool) => tool.function.name) ?? []).toContain("cloud_delegate")
   const edited = await rpc.edit(
     {
       ...pick(redaction),
@@ -1842,6 +1845,14 @@ test("redaction edit and outbound edit reach only the approved native child", as
       .some((request) => request.tools?.some((tool) => tool.function.name === "cloud_delegate")),
   ).toBe(true)
   expect(requests.slice(before).filter((request) => request.model === "cloud")).toHaveLength(0)
+  const delegateRequest = requests
+    .slice(before)
+    .findLast((request) => request.tools?.some((tool) => tool.function.name === "cloud_delegate"))!
+  const guidance = JSON.stringify(delegateRequest.messages.filter((message) => message.role === "system"))
+  expect(guidance).toContain("Prepare sufficient materials")
+  expect(guidance).toContain(redaction.id)
+  expect(guidance).toContain("cloud_delegate accepts reviewIds only")
+  expect(guidance).not.toContain("USER_EDITED_MATERIAL")
   expect(JSON.stringify(outbound.candidate)).toContain("USER_EDITED_MATERIAL")
   expect(Task.parse(outbound.candidate).instructions).toBe((edited.candidate as { text: string }).text)
   const delegateSchema = requests
@@ -4368,7 +4379,7 @@ test("failed redaction cannot be skipped by delegating unreviewed text", async (
   const delegation = calls.find((part) => part.type === "tool" && part.name === "cloud_delegate")
   expect(delegation).toMatchObject({ state: { status: "error" } })
   for (const request of requests.slice(before))
-    expect(request.tools?.map((tool) => tool.function.name) ?? []).not.toContain("cloud_delegate")
+    expect(request.tools?.map((tool) => tool.function.name) ?? []).toContain("cloud_delegate")
 })
 
 test.each(["redaction", "outbound"])(

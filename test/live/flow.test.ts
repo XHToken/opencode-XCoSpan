@@ -11,7 +11,14 @@ import { command, packageRegistry } from "../fixtures/registry"
 import { parseSettings } from "../../src/settings"
 
 // These tests incur real provider usage and send only synthetic test materials.
-const records: { role: "local" | "cloud"; endpoint: string; body: unknown }[] = []
+const records: {
+  role: "local" | "cloud"
+  endpoint: string
+  body: unknown
+  startedAt: number
+  firstByteAt?: number
+  lastByteAt?: number
+}[] = []
 let directory: string
 let host: ReturnType<typeof Bun.spawn>
 let proxy: ReturnType<typeof Bun.serve>
@@ -77,7 +84,9 @@ beforeAll(async () => {
       const body = await request.text()
       const payload = JSON.parse(body)
       const endpoint = pathname.slice(role.length + 1)
-      const requestID = records.push({ role, endpoint, body: payload })
+      const startedAt = Date.now()
+      const record: (typeof records)[number] = { role, endpoint, body: payload, startedAt }
+      const requestID = records.push(record)
       await writeFile(join(artifactRoot, "requests.json"), JSON.stringify(records, null, 2))
       console.log(
         "Model request",
@@ -123,6 +132,8 @@ beforeAll(async () => {
       const stream = response.body?.pipeThrough(
         new TransformStream<Uint8Array, Uint8Array>({
           async transform(chunk, controller) {
+            record.firstByteAt ??= Date.now()
+            record.lastByteAt = Date.now()
             writer.write(chunk)
             await writer.flush()
             controller.enqueue(chunk)

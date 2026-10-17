@@ -70,7 +70,7 @@ export async function registerRedaction(
             .string()
             .min(1)
             .describe(
-              "Original text to redact, including relevant context or extracted document/table text.",
+              "Task handoff and relevant conversation, plus any evidence supplied inline. Referenced files supply their own bodies through files.",
             ),
           files: z
             .array(z.string().min(1))

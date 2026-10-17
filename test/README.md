@@ -45,7 +45,7 @@ bun run test:live --test-name-pattern "real quick start"
 
 `XCOSPAN_PACKAGE` can point to an installed package directory to validate that artifact. Without it, live tests use the checkout. Configuration errors fail before starting the host.
 
-Live artifacts are written to ignored `.local/live/`: request bodies, response streams, session records and terminal snapshots. They are diagnostic output and must be reviewed before sharing. Request authorization headers are not recorded. Never use private documents in automated live tests.
+Live artifacts are written to ignored `.local/live/`: request bodies, response streams, session records and terminal snapshots. They are diagnostic output and must be reviewed before sharing. Request records include start, first-byte, and last-observed-byte timestamps for latency analysis. Native session and run states establish execution completion. Request authorization headers are not recorded. Never use private documents in automated live tests.
 
 The quick-start journey runs the same `opencode plugin add` command as the README against an isolated registry serving the real npm tarball. It preserves existing provider configuration, selects and probes model roles in the native TUI, then enters four consecutive tasks in one session: local calculation, reviewed text collaboration, reviewed file collaboration, and another local calculation. It edits outbound revisions and approves reviews through terminal input, records each phase, and checks actual cloud requests and sensitive-content isolation.
 

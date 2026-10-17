@@ -164,7 +164,7 @@ const plugin = {
         options: { codemode: false },
         input: DelegateInput,
         description:
-          "Delegate the approved task to the cloud collaborator using reviewIds. Include a reviewed text handoff with the objective, relevant context and expected output; additional reviewed text or images provide evidence. The user edits and approves the complete outbound content before cloud execution. Waits for the actual result.",
+          "Execute cloud collaboration from approved reviewIds. Pass only the IDs of reviewed materials for the current query, with the task handoff first. The plugin loads their exact contents, obtains final outbound approval, and returns the actual execution result.",
         async execute(input, tool) {
           if (tool.agent !== PRIMARY_AGENT)
             throw new Error("Cloud delegation is available to the xcospan agent")
