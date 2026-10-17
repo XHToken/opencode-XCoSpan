@@ -11,12 +11,7 @@ export const PRIMARY_AGENT = "xcospan"
 export const CLOUD_TOOLS = ["websearch", "webfetch"]
 
 export function taskPrompt(task: Task): string {
-  return [
-    task.goal,
-    task.context,
-    ...task.materials.flatMap((item) => (item.type === "text" ? [item.text] : [])),
-    `Expected output: ${task.expectedOutput}`,
-  ]
+  return [task.instructions, ...task.materials.flatMap((item) => (item.type === "text" ? [item.text] : []))]
     .filter(Boolean)
     .join("\n\n")
 }

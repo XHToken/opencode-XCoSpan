@@ -4,8 +4,9 @@ import type { SessionContext } from "@opencode/plugin/promise/session"
 import type { Delegations } from "./delegate"
 import { CLOUD_AGENT, CLOUD_TOOLS, PRIMARY_AGENT, taskPrompt } from "./delegate"
 import { CLOUD_INSTRUCTIONS } from "./prompts"
-import { Task, imageURI, type Config } from "./types"
+import { Task, RouteResult, imageURI, type Config } from "./types"
 import type { Reviews } from "./review"
+import { currentRedactionID } from "./redact"
 
 export async function registerContext(
   ctx: Plugin.Context,
@@ -25,6 +26,29 @@ export async function registerContext(
         throw new Error(
           `XCoSpan agent requires ${config.localModel.providerID}/${config.localModel.id}; got ${event.model.providerID}/${event.model.id}`,
         )
+      if (event.agent === PRIMARY_AGENT && !compaction) {
+        const history = await ctx.session.context({ sessionID: event.sessionID })
+        const session = await ctx.session.get({ sessionID: event.sessionID })
+        const route = session.metadata?.xcospanRoute
+        const user = history.findLast((message) => message.type === "user")
+        const cloud =
+          route &&
+          typeof route === "object" &&
+          "messageID" in route &&
+          route.messageID === user?.id &&
+          "result" in route &&
+          RouteResult.parse(route.result).cloud
+        const reviewID = currentRedactionID(history)
+        const review = reviewID ? await reviews.get(reviewID, event.sessionID) : undefined
+        if (!cloud || review?.kind !== "redaction" || review.status !== "approved") {
+          delete event.tools.cloud_delegate
+          if (cloud)
+            event.system.push({
+              type: "text",
+              text: "Cloud preparation: submit the relevant task context and selected evidence through the directly callable redact or redact_image tool for review. Direct function tools are available independently of the Code Mode catalog; invoke them through their advertised tool schema. cloud_delegate becomes available after review approval.",
+            })
+        }
+      }
       return
     }
     const review = await reviews.get(run.reviewID, run.sessionID)

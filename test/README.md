@@ -84,3 +84,5 @@ soffice --headless --convert-to doc --outdir test/fixtures/materials test/fixtur
 The multi-file live test lets the model choose its local reading and calculation tools. The shipped extraction helper uses the installed Xberg native package. OCR tests need English Tesseract language data available to that engine. Exact workbook calculations need an appropriate local tool, such as Python with `openpyxl`. LibreOffice is used only to regenerate the legacy `.doc` test fixture.
 
 `fixtures/boundary-probe/` tests extension permissions; `fixtures/delivery-barrier/` controls a crash point between completion and delivery. These are test-only plugins and are excluded from the published package.
+
+The unchanged-candidate live test approves model-prepared material and outbound reviews without rewriting their fields. It checks that private fixture values stay out of the candidate and cloud requests, that collaboration completes, and that a subsequent local request stays local. Tests that edit candidates separately verify the review UI and approved-version contract.

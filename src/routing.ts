@@ -105,7 +105,14 @@ export function withRouting(plugin: {
                     service.route(
                       {
                         query: user.text,
-                        context: history.slice(0, history.indexOf(user)),
+                        context: history.slice(0, history.indexOf(user)).map((message) =>
+                          message.type === "assistant"
+                            ? {
+                                ...message,
+                                content: message.content.filter((part) => part.type !== "reasoning"),
+                              }
+                            : message,
+                        ),
                         files: user.files ?? [],
                         capabilities: {
                           localModel: config.localModel,

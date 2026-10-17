@@ -131,10 +131,10 @@ export default Plugin.define({
         title: cancel ? "Cancel cloud task" : "Recover cloud results",
         options: runs.map((run) => {
           const review = list.reviews.find((review) => review.id === run.reviewID)
-          if (!review || !("goal" in review.candidate))
+          if (!review || !("instructions" in review.candidate))
             throw new Error(`Cloud task has no outbound review: ${run.id}`)
           return {
-            title: review.candidate.goal,
+            title: review.candidate.instructions,
             description: runLabels[run.status],
             value: run.id,
           }

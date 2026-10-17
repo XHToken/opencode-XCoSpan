@@ -16,9 +16,7 @@ export const Content = z.discriminatedUnion("type", [Text, Image])
 export type Content = z.infer<typeof Content>
 export const Task = z
   .object({
-    goal: requiredText("Task goal"),
-    context: z.string(),
-    expectedOutput: requiredText("Expected output"),
+    instructions: requiredText("Task instructions"),
     materials: z.array(Content),
   })
   .strict()

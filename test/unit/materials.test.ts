@@ -92,3 +92,35 @@ test("the shipped CLI lists engine formats and extracts without converter output
   expect(result.results[0].content).toContain("SAMPLE-707")
   expect(await Bun.file(join(directory, "fresh source.md")).text()).toBe("Stale unrelated output")
 })
+
+test("the CLI emits complete readable material and keeps existing paths intact", async () => {
+  const script = resolve(import.meta.dir, "../../skills/materials/extract.ts")
+  const source = join(directory, "multiline source.md")
+  const output = join(directory, "readable material.md")
+  const text = Array.from(
+    { length: 150 },
+    (_, index) => `## Section ${index + 1}\n\nPreserve this source evidence.`,
+  ).join("\n\n")
+  await writeFile(source, text)
+  const child = Bun.spawn([process.execPath, script, source, "--text-output", output], {
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const result = JSON.parse(await new Response(child.stdout).text())
+  expect(await child.exited).toBe(0)
+  expect(await readFile(output, "utf8")).toBe(
+    result.results.map((document: { content: string }) => document.content).join("\n\n"),
+  )
+  expect(await readFile(output, "utf8")).toContain("Section 150")
+  expect((await readFile(output, "utf8")).split("\n").length).toBeGreaterThanOrEqual(150)
+  for (const existing of [source, output]) {
+    const before = await readFile(existing)
+    const blocked = Bun.spawn([process.execPath, script, source, "--text-output", existing], {
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    await new Response(blocked.stderr).text()
+    expect(await blocked.exited).not.toBe(0)
+    expect(await readFile(existing)).toEqual(before)
+  }
+})

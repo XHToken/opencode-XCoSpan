@@ -7,6 +7,8 @@
 - Per-request local/cloud routing with configurable model roles and a strict `{ reason, route: 0 | 1 }` service contract.
 - Capability-based routing and text redaction through English model instructions.
 - Text and optional image redaction review, editable outbound approval, and version-bound delegation.
+- Reviewed task handoffs and reference-only delegation arguments; the local model submits task instructions for review before selecting approved content for cloud collaboration.
+- State-aware tool exposure and routing context without prior reasoning traces.
 - Progress, cancellation, recovery, and result delivery through OpenCode sessions.
 - Collaboration stages restore from persisted task and review records when a terminal connects or reconnects.
 - User cancellation stops the active task and concurrent reviews; subsequent requests start normally.
@@ -18,7 +20,7 @@
 - `/xcospan` model configuration, connection checks, and lifecycle controls.
 - Saving unchanged model settings keeps collaboration available and completes immediately.
 - Installation, update, and removal through OpenCode plugin commands.
-- A materials Skill for task-driven extraction and source verification.
+- A materials Skill for task-driven extraction and source verification, with complete readable text export to a new local file.
 - Package documentation and diagrams with validated relative links.
 
 ### Verification
@@ -27,5 +29,6 @@
 - Native Windows terminal tests using ConPTY, OCR data, and special-character workspaces.
 - Provider credentials, environment credentials, and account-store authentication coverage.
 - A real-model TUI journey covering local execution, text and file collaboration, and return to local execution in one session.
+- A live quality check that approves model-generated candidates unchanged and checks privacy boundaries before cloud submission.
 - Tarball installation, release validation, and npm publication workflows.
 - Commit-history secret scanning and dependency audits in pull-request verification.

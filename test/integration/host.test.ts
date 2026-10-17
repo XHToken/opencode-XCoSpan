@@ -164,9 +164,6 @@ function completion(body: Request) {
           function: {
             name: "cloud_delegate",
             arguments: JSON.stringify({
-              goal: "Research",
-              context: "Self-anonymized input",
-              expectedOutput: "Advice",
               reviewIds: JSON.stringify(body.messages).includes("FORGED_REDACTION_REVIEW")
                 ? ["fabricated-review"]
                 : [],
@@ -209,7 +206,13 @@ function completion(body: Request) {
   } else if (toolResults.length === 0) {
     const input = JSON.stringify(body.messages).includes("IMAGE_TASK")
       ? { path: imagePath }
-      : { content: bypass ? "" : redactionText }
+      : {
+          content: bypass
+            ? ""
+            : JSON.stringify(body.messages).includes("CLOUD_CONTEXT_FAILURE")
+              ? "CLOUD_CONTEXT_FAILURE"
+              : redactionText,
+        }
     delta = {
       role: "assistant",
       tool_calls: [
@@ -222,7 +225,29 @@ function completion(body: Request) {
       ],
     }
     finish = "tool_calls"
-  } else if (toolResults.length === (multipleImages ? 2 : 1)) {
+  } else if (
+    JSON.stringify(body.messages).includes("IMAGE_TASK") &&
+    toolResults.length === (multipleImages ? 2 : 1) &&
+    toolResults.every((result) => JSON.stringify(result).includes("reviewId"))
+  ) {
+    delta = {
+      role: "assistant",
+      tool_calls: [
+        {
+          index: 0,
+          id: "call_handoff",
+          type: "function",
+          function: {
+            name: "redact",
+            arguments: JSON.stringify({ content: "Analyze the reviewed images and report the findings." }),
+          },
+        },
+      ],
+    }
+    finish = "tool_calls"
+  } else if (
+    toolResults.length === (multipleImages ? 3 : JSON.stringify(body.messages).includes("IMAGE_TASK") ? 2 : 1)
+  ) {
     const reviewIds = toolResults.map(
       (result) => JSON.stringify(result).match(/[0-9a-f]{8}-[0-9a-f-]{27}/)?.[0],
     )
@@ -241,11 +266,6 @@ function completion(body: Request) {
           function: {
             name: "cloud_delegate",
             arguments: JSON.stringify({
-              goal: JSON.stringify(body.messages).includes("CLOUD_CONTEXT_FAILURE")
-                ? "CLOUD_CONTEXT_FAILURE"
-                : "Research the industry",
-              context: "Relevant reviewed context",
-              expectedOutput: "Evidence and conclusion",
               reviewIds: reviewIds.map((id) => id ?? "unreviewed"),
             }),
           },
@@ -319,7 +339,7 @@ beforeAll(async () => {
         })
       }
       if (path === "/redact") {
-        const body = (await request.json()) as { content: { type: string } }
+        const body = (await request.json()) as { content: { type: string; text?: string } }
         if (redactionGate) {
           redactionStarted = true
           request.signal.addEventListener(
@@ -335,7 +355,12 @@ beforeAll(async () => {
           content:
             body.content.type === "image"
               ? body.content
-              : { type: "text", text: "[PERSON] needs industry research" },
+              : {
+                  type: "text",
+                  text: body.content.text?.includes("CLOUD_CONTEXT_FAILURE")
+                    ? "CLOUD_CONTEXT_FAILURE"
+                    : "[PERSON] needs industry research",
+                },
           changes: "Fixture transformation",
         })
       }
@@ -1449,16 +1474,25 @@ test("native TUI invalid edits preserve draft and recover without sending", asyn
     tui.write("\x01")
     await until(async () => (tui.screen().includes("Outbound review") ? true : undefined), "outbound")
     tui.write("\x05")
-    await until(async () => (tui.screen().includes("Task goal · Tab") ? true : undefined), "goal editor")
+    await until(
+      async () => (tui.screen().includes("Task instructions · Tab") ? true : undefined),
+      "goal editor",
+    )
     tui.write("\t")
-    await until(async () => (tui.screen().includes("Related context · Tab") ? true : undefined), "next field")
+    await until(
+      async () => (tui.screen().includes("Task instructions · Tab") ? true : undefined),
+      "next field",
+    )
     tui.write("\x1b[Z")
-    await until(async () => (tui.screen().includes("Task goal · Tab") ? true : undefined), "previous field")
+    await until(
+      async () => (tui.screen().includes("Task instructions · Tab") ? true : undefined),
+      "previous field",
+    )
     tui.write("\x1b[97;9u\x1b[200~   \x1b[201~")
     await Bun.sleep(100)
     tui.write("\x13")
     await until(
-      async () => (tui.screen().includes("Task goal must not be empty") ? true : undefined),
+      async () => (tui.screen().includes("Task instructions must not be empty") ? true : undefined),
       "blank goal",
     )
     expect(requests.slice(before).filter((request) => request.model === "cloud")).toHaveLength(0)
@@ -1747,6 +1781,8 @@ test("redaction edit and outbound edit reach only the approved native child", as
     )
   const redaction = await pending("redaction")
   expect(requests.slice(before).filter((request) => request.model === "cloud")).toHaveLength(0)
+  for (const request of requests.slice(before))
+    expect(request.tools?.map((tool) => tool.function.name) ?? []).not.toContain("cloud_delegate")
   const edited = await rpc.edit(
     {
       ...pick(redaction),
@@ -1763,12 +1799,22 @@ test("redaction edit and outbound edit reach only the approved native child", as
   )
   await rpc.approve({ ...pick(edited), revision: edited.revision }, opts)
   const outbound = await pending("outbound")
+  expect(
+    requests
+      .slice(before)
+      .some((request) => request.tools?.some((tool) => tool.function.name === "cloud_delegate")),
+  ).toBe(true)
   expect(requests.slice(before).filter((request) => request.model === "cloud")).toHaveLength(0)
   expect(JSON.stringify(outbound.candidate)).toContain("USER_EDITED_MATERIAL")
+  expect(Task.parse(outbound.candidate).instructions).toBe((edited.candidate as { text: string }).text)
+  const delegateSchema = requests
+    .slice(before)
+    .flatMap((request) => request.tools ?? [])
+    .find((tool) => tool.function.name === "cloud_delegate")
+  expect(JSON.stringify(delegateSchema)).not.toContain("expectedOutput")
   for (const candidate of [
-    { ...outbound.candidate, goal: "" },
-    { ...outbound.candidate, goal: " \n\t" },
-    { ...outbound.candidate, expectedOutput: "" },
+    { ...outbound.candidate, instructions: "" },
+    { ...outbound.candidate, instructions: " \n\t" },
     { ...outbound.candidate, materials: [{ type: "text", text: " " }] },
   ]) {
     await expect(
@@ -1780,7 +1826,7 @@ test("redaction edit and outbound edit reach only the approved native child", as
     {
       ...pick(outbound),
       revision: outbound.revision,
-      candidate: { ...outbound.candidate, goal: "USER_EDITED_GOAL" },
+      candidate: { ...outbound.candidate, instructions: "USER_EDITED_GOAL\nUSER_EDITED_MATERIAL" },
     },
     opts,
   )
@@ -2773,6 +2819,22 @@ test("native TUI rejects confirmation when the candidate image cannot be decoded
   }
 }, 60000)
 
+async function approveImageHandoff(sessionID: string) {
+  const rpc = client.rpc(XCoSpan)
+  const review = await until(
+    async () =>
+      (await rpc.list({ sessionID }, { location })).reviews.find(
+        (item) =>
+          item.kind === "redaction" &&
+          item.status === "pending" &&
+          "type" in item.candidate &&
+          item.candidate.type === "text",
+      ),
+    "image task handoff",
+  )
+  await rpc.approve({ ...pick(review), revision: review.revision }, { location })
+}
+
 test("native TUI image replacement keeps approved bytes after the source file changes", async () => {
   const replacement = join(location.directory, "replacement.png")
   await writeFile(replacement, Buffer.from(blueImage, "base64"))
@@ -2827,6 +2889,7 @@ test("native TUI image replacement keeps approved bytes after the source file ch
       "revised image preview",
     )
     tui.write("\x01")
+    await approveImageHandoff(session.id)
     const outbound = await until(
       async () =>
         (await rpc.list({ sessionID: session.id }, { location })).reviews.find(
@@ -3015,6 +3078,7 @@ test("native TUI reviews multiple large images and replaces the selected materia
       )
       reviewed.add(review.id)
     }
+    await approveImageHandoff(session.id)
     const outbound = await until(
       async () =>
         (await rpc.list({ sessionID: session.id }, { location })).reviews.find(
@@ -3033,7 +3097,7 @@ test("native TUI reviews multiple large images and replaces the selected materia
     }, "last image preview")
     expect(tui.screen()).toContain("Ctrl+A")
     tui.write("\x05")
-    for (const label of ["Task goal", "Related context", "Expected output", "Image 1: ", "Image 2: "]) {
+    for (const label of ["Task instructions", "Image 1: ", "Image 2: "]) {
       await until(async () => (tui.screen().includes(label) ? true : undefined), "image edit field " + label)
       if (label !== "Image 2: ") tui.write("\t")
     }
@@ -3126,7 +3190,7 @@ test("native TUI reviews multiple large images and replaces the selected materia
     )
     tui.write("\x05")
     await until(
-      async () => (tui.screen().includes("Task goal · Tab") ? true : undefined),
+      async () => (tui.screen().includes("Task instructions · Tab") ? true : undefined),
       "edit from image viewer",
     )
     tui.write("\x05")
@@ -3180,6 +3244,7 @@ test("image bytes are reviewed and submitted inline without local file paths", a
     )
     expect(JSON.stringify(review.candidate)).toContain(pixel)
     await rpc.approve({ ...pick(review), revision: review.revision }, opts)
+    if (kind === "redaction") await approveImageHandoff(session.id)
   }
   await client.session.wait({ sessionID: session.id })
   const cloud = requests.slice(before).filter((item) => item.model === "cloud")
@@ -3341,8 +3406,7 @@ test.each([
       )
       tui.write("\x1b[F")
       await until(
-        async () =>
-          tui.screen().includes("EDITED_END") && tui.screen().includes("Expected output") ? true : undefined,
+        async () => (tui.screen().includes("EDITED_END") ? true : undefined),
         "outbound material and final instructions",
       )
       expect(requests.slice(before).filter((request) => request.model === "cloud")).toHaveLength(0)
@@ -3390,7 +3454,7 @@ test("native narrow outbound preview preserves every wrapped character beside sc
     {
       ...pick(outbound),
       revision: outbound.revision,
-      candidate: { ...Task.parse(outbound.candidate), goal, context: "Long context\n".repeat(30) },
+      candidate: { instructions: goal, materials: [{ type: "text", text: "Long context\n".repeat(30) }] },
     },
     { location },
   )
@@ -3409,13 +3473,13 @@ test("native narrow outbound preview preserves every wrapped character beside sc
   )
   try {
     await until(
-      async () => (tui.screen().includes("[Related context]") ? true : undefined),
+      async () => (tui.screen().includes("[Material 1]") ? true : undefined),
       "full width wrapped goal",
     )
     const visible = tui
       .screen()
-      .split("[Task goal]")[1]
-      ?.split("[Related context]")[0]
+      .split("[Task instructions]")[1]
+      ?.split("[Material 1]")[0]
       ?.replace(/[\s█▀▄]/g, "")
     expect(visible).toBe(goal.replace(/\s/g, ""))
     expect(tui.screen()).toContain("Ctrl+A Approve")
@@ -3602,9 +3666,7 @@ test.each([
       tui.write("\x01")
       await until(
         async () =>
-          ["Outbound review", "Task goal", "Related context", "Material 1", "Expected output"].every(
-            (label) => screen().includes(label),
-          )
+          ["Outbound review", "Task instructions"].every((label) => screen().includes(label))
             ? true
             : undefined,
         "TUI complete outbound sections",
@@ -3621,9 +3683,7 @@ test.each([
         "full width candidate",
       )
       const preview = screen()
-      expect(preview.indexOf("Task goal")).toBeLessThan(preview.indexOf("Related context"))
-      expect(preview.indexOf("Related context")).toBeLessThan(preview.indexOf("Material 1"))
-      expect(preview.indexOf("Material 1")).toBeLessThan(preview.indexOf("Expected output"))
+      expect(preview).toContain("TUI_EDIT")
       const rpc = client.rpc(XCoSpan)
       const outbound = (await rpc.list({ sessionID: session.id }, { location })).reviews.find(
         (item) => item.kind === "outbound" && item.status === "pending",
@@ -3634,7 +3694,7 @@ test.each([
         {
           ...pick(outbound),
           revision: outbound.revision,
-          candidate: { ...Task.parse(outbound.candidate), goal: wrappedGoal },
+          candidate: { instructions: wrappedGoal, materials: [{ type: "text", text: "Supporting context" }] },
         },
         { location },
       )
@@ -3643,8 +3703,8 @@ test.each([
         "wrapped preview",
       )
       const visibleGoal = screen()
-        .split("[Task goal]")[1]
-        ?.split("[Related context]")[0]
+        .split("[Task instructions]")[1]
+        ?.split("[Material 1]")[0]
         ?.replace(/[\s█▀▄]/g, "")
       expect(visibleGoal).toBe(wrappedGoal.replace(/\s/g, ""))
       const expanded = await rpc.edit(
@@ -3653,19 +3713,19 @@ test.each([
           revision: readable.revision,
           candidate: {
             ...Task.parse(outbound.candidate),
-            goal:
+            instructions:
               "LONG_GOAL\n" +
               "Replace this entire long goal line, including automatically wrapped text and explicit line breaks.".repeat(
                 20,
               ),
-            context: "LONG_CONTEXT\n" + "Multiline related context\n".repeat(30),
+            materials: [{ type: "text", text: "LONG_CONTEXT\n" + "Multiline related context\n".repeat(30) }],
           },
         },
         { location },
       )
       await until(async () => (screen().includes("LONG_GOAL") ? true : undefined), "long candidate preview")
       tui.write("\x05")
-      for (const [index, label] of ["Task goal", "Related context", "Expected output"].entries()) {
+      for (const [index, label] of ["Task instructions", "Material 1"].entries()) {
         await until(
           async () => (screen().includes(label + " · Tab") ? true : undefined),
           "focused outbound field",
@@ -3676,7 +3736,7 @@ test.each([
           async () => (screen().includes("REPLACED_FIELD_" + index) ? true : undefined),
           "replaced complete field",
         )
-        if (index < 2) tui.write("\t")
+        if (index < 1) tui.write("\t")
       }
       tui.write("\x13")
       const saved = await until(async () => {
@@ -3684,9 +3744,8 @@ test.each([
         return next.revision === expanded.revision + 1 ? next : undefined
       }, "saved multiline replacements")
       expect(Task.parse(saved.candidate)).toMatchObject({
-        goal: "REPLACED_FIELD_0",
-        context: "REPLACED_FIELD_1",
-        expectedOutput: "REPLACED_FIELD_2",
+        instructions: "REPLACED_FIELD_0",
+        materials: [{ type: "text", text: "REPLACED_FIELD_1" }],
       })
       await until(
         async () =>
@@ -3751,7 +3810,10 @@ test.each([
       expect((await client.rpc(XCoSpan).list({ sessionID: session.id }, { location })).runs[0]?.status).toBe(
         "completed",
       )
-      expect(JSON.stringify(requests.filter((item) => item.model === "cloud").at(-1))).toContain("TUI_EDIT")
+      const finalPayload = JSON.stringify(requests.filter((item) => item.model === "cloud").at(-1))
+      expect(finalPayload).toContain("REPLACED_FIELD_0")
+      expect(finalPayload).toContain("REPLACED_FIELD_1")
+      expect(finalPayload).not.toContain("TUI_EDIT")
       await until(
         async () => (screen().includes("Request finished") ? true : undefined),
         "TUI completed stage",
@@ -4268,7 +4330,8 @@ test("failed redaction cannot be skipped by delegating unreviewed text", async (
   const calls = history.flatMap((message) => (message.type === "assistant" ? message.content : []))
   const delegation = calls.find((part) => part.type === "tool" && part.name === "cloud_delegate")
   expect(delegation).toMatchObject({ state: { status: "error" } })
-  expect(JSON.stringify(delegation)).toContain("Complete redaction review")
+  for (const request of requests.slice(before))
+    expect(request.tools?.map((tool) => tool.function.name) ?? []).not.toContain("cloud_delegate")
 })
 
 test.each(["redaction", "outbound"])(

@@ -4,7 +4,7 @@ import type { ImageRenderable, ScrollBoxRenderable } from "@opentui/core"
 import type { Content, Task } from "../types"
 
 export function reviewImages(content: Content | Task, label: string) {
-  return ("goal" in content ? content.materials : [content]).flatMap((item, index) =>
+  return ("instructions" in content ? content.materials : [content]).flatMap((item, index) =>
     item.type === "image" ? [{ image: item, label: `${label} · Image ${index + 1}` }] : [],
   )
 }

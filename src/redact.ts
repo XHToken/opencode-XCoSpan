@@ -6,6 +6,17 @@ import { PRIMARY_AGENT } from "./delegate"
 import type { Reviews } from "./review"
 import { Content, Image, imageURI } from "./types"
 
+export function currentRedactionID(history: Awaited<ReturnType<Plugin.Context["session"]["context"]>>) {
+  const currentQuery = history.findLastIndex((message) => message.type === "user")
+  const part = history
+    .slice(currentQuery + 1)
+    .flatMap((message) => (message.type === "assistant" ? message.content : []))
+    .findLast((part) => part.type === "tool" && ["redact", "redact_image"].includes(part.name))
+  if (part?.type !== "tool" || part.state.status !== "completed") return
+  const id = part.state.metadata?.reviewId
+  return typeof id === "string" ? id : undefined
+}
+
 export async function registerRedaction(
   ctx: Plugin.Context,
   redact: ReturnType<typeof capabilities>["redact"],

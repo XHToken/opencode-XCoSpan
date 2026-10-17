@@ -19,20 +19,18 @@ function ContentView(props: {
   failed?(error: unknown): void
 }) {
   const texts = () =>
-    "goal" in props.content
+    "instructions" in props.content
       ? [
-          { label: "Task goal", text: props.content.goal },
-          { label: "Related context", text: props.content.context },
+          { label: "Task instructions", text: props.content.instructions },
           ...props.content.materials.flatMap((item, index) =>
             item.type === "text" ? [{ label: `Material ${index + 1}`, text: item.text }] : [],
           ),
-          { label: "Expected output", text: props.content.expectedOutput },
         ]
       : props.content.type === "text"
         ? [{ label: "", text: props.content.text }]
         : []
   const images = () =>
-    ("goal" in props.content ? props.content.materials : [props.content]).flatMap((item, index) =>
+    ("instructions" in props.content ? props.content.materials : [props.content]).flatMap((item, index) =>
       item.type === "image" ? [{ item, index }] : [],
     )
   return (
@@ -109,7 +107,7 @@ export function ReviewDialog(props: {
     JSON.stringify(draft()) !== JSON.stringify(review().candidate)
   const imagesReady = () =>
     (comparing() ? [review().original, draft()] : [draft()]).every((content) => {
-      const materials = "goal" in content ? content.materials : [content]
+      const materials = "instructions" in content ? content.materials : [content]
       return materials.every((item) => item.type !== "image" || loaded().has(item.data))
     })
   const ready = (data: string) => setLoaded((previous) => new Set([...previous, data]))
@@ -126,20 +124,15 @@ export function ReviewDialog(props: {
   const fields = createMemo(() => {
     const candidate = draft()
     const result: Field[] = []
-    if ("goal" in candidate) {
-      for (const [key, label] of [
-        ["goal", "Task goal"],
-        ["context", "Related context"],
-        ["expectedOutput", "Expected output"],
-      ] as const)
-        result.push({
-          label,
-          value: candidate[key],
-          set: (value) =>
-            update((item) => {
-              if ("goal" in item) item[key] = value
-            }),
-        })
+    if ("instructions" in candidate) {
+      result.push({
+        label: "Task instructions",
+        value: candidate.instructions,
+        set: (value) =>
+          update((item) => {
+            if ("instructions" in item) item.instructions = value
+          }),
+      })
       candidate.materials.forEach((item, index) => {
         if (item.type === "text")
           result.push({
@@ -147,7 +140,7 @@ export function ReviewDialog(props: {
             value: item.text,
             set: (value) =>
               update((value2) => {
-                if ("goal" in value2) {
+                if ("instructions" in value2) {
                   const material = value2.materials[index]
                   if (material?.type === "text") material.text = value
                 }
@@ -323,7 +316,7 @@ export function ReviewDialog(props: {
                 data: Buffer.from(await file.arrayBuffer()).toString("base64"),
               })
               imageURI(content)
-              if ("goal" in candidate) candidate.materials[Number(index)] = content
+              if ("instructions" in candidate) candidate.materials[Number(index)] = content
               else candidate = content
             }
             const next = await props.client.edit(

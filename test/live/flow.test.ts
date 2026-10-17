@@ -462,7 +462,7 @@ test("real quick start and four consecutive tasks use one native TUI session", a
           }
           if (review.kind === "outbound") {
             tui.write("\x05")
-            await screen("Task goal · Tab")
+            await screen("Task instructions · Tab")
             tui.write("\x01Review note: Keep the final response concise. ")
             await screen("Review note")
             tui.write("\x13")
@@ -590,9 +590,8 @@ test("real models consume a recovered cloud result after host restart", async ()
               }
             : {
                 ...Task.parse(review.candidate),
-                goal: "Analyze the suitability and risks of inventory replenishment strategies for manufacturers.",
-                context: "Compare fixed-quantity, periodic, and just-in-time replenishment.",
-                expectedOutput: "Give three concise recommendations and the business conditions for each.",
+                instructions:
+                  "Compare fixed-quantity, periodic, and just-in-time replenishment for manufacturers. Give three concise recommendations and the business conditions for each.",
               }
         const edited = await rpc.edit(
           {
@@ -829,10 +828,9 @@ test("real models complete reviewed text collaboration", async () => {
             revision: review.revision,
             candidate: {
               ...candidate,
-              goal: "Research public sources and analyze the applicability and risks of inventory replenishment strategies for manufacturers.",
-              context: (reviewed.candidate as { text: string }).text,
-              expectedOutput:
-                "Give concise, sourced recommendations and finish with three actionable recommendations.",
+              instructions:
+                (reviewed.candidate as { text: string }).text +
+                "\nGive concise, sourced recommendations and finish with three actionable recommendations.",
             },
           },
           options,
@@ -991,8 +989,8 @@ test("real models extract PDF and Excel, combine materials and route a follow-up
               review.kind === "outbound"
                 ? {
                     ...Task.parse(candidate),
-                    expectedOutput:
-                      Task.parse(candidate).expectedOutput +
+                    instructions:
+                      Task.parse(candidate).instructions +
                       "\nReview note: Provide specific amounts for payment adjustments.",
                   }
                 : {
@@ -1235,7 +1233,9 @@ test("real file collaboration uses the native TUI for edits and both confirmatio
         tui.write("\x05")
         await until(
           async () =>
-            screen().includes((review.kind === "redaction" ? "Redacted content" : "Task goal") + " · Tab")
+            screen().includes(
+              (review.kind === "redaction" ? "Redacted content" : "Task instructions") + " · Tab",
+            )
               ? true
               : undefined,
           "editable TUI",
@@ -1243,16 +1243,10 @@ test("real file collaboration uses the native TUI for edits and both confirmatio
         )
         const fields: [string, string][] = [
           [
-            "Task goal",
-            "Review note: Analyze customer revenue changes and concentration risk, and recommend business improvements.",
-          ],
-          [
-            "Related context",
-            "The user has reviewed the attached anonymized customer table. Analyze both years of revenue while preserving the relationships between customers and amounts.",
-          ],
-          [
-            "Expected output",
-            "Preserve numerical evidence and give targeted business recommendations with their applicability conditions.",
+            "Task instructions",
+            Task.parse(
+              review.kind === "outbound" ? review.candidate : { instructions: "Review", materials: [] },
+            ).instructions + "\nReview note: Preserve numerical evidence and give targeted recommendations.",
           ],
         ]
         if (review.kind === "outbound") {
@@ -1284,7 +1278,7 @@ test("real file collaboration uses the native TUI for edits and both confirmatio
         )
         if (review.kind === "outbound") {
           const task = Task.parse(saved.candidate)
-          expect([task.goal, task.context, task.expectedOutput]).toEqual(fields.map(([, value]) => value))
+          expect([task.instructions]).toEqual(fields.map(([, value]) => value))
         }
         for (const secret of [
           "Starport Manufacturing",
@@ -1339,5 +1333,70 @@ test("real file collaboration uses the native TUI for edits and both confirmatio
       JSON.stringify(await client.session.context({ sessionID: session.id }), null, 2),
     )
     await tui.close()
+  }
+}, 1860000)
+
+test("real models compose reviewed collaboration without operator repair", async () => {
+  const start = records.length
+  const options = { location: { directory } }
+  const session = await client.session.create({ ...options, agent: "xcospan" })
+  const rpc = client.rpc(XCoSpan)
+  const secrets = [
+    "Alex Chen",
+    "Starport Manufacturing",
+    "13800138000",
+    "PRIVATE_WORKSPACE_SENTINEL",
+    directory,
+  ]
+  try {
+    await client.session.prompt({
+      sessionID: session.id,
+      text: "I am Alex Chen at Starport Manufacturing, phone 13800138000. Use cloud collaboration to compare periodic inventory review and continuous inventory review for a manufacturer. Explain the trade-offs and when each fits, using a concise comparison table. This is a conceptual explanation; current market research is unnecessary. Redact my identity and contact details before sharing.",
+    })
+    const state = await until(async () => {
+      const state = await rpc.list({ sessionID: session.id }, options)
+      await writeFile(join(artifactRoot, "unrepaired-state.json"), JSON.stringify(state, null, 2))
+      for (const review of state.reviews.filter((item) => item.status === "pending")) {
+        const candidate = JSON.stringify(review.candidate)
+        for (const secret of secrets) expect(candidate).not.toContain(secret)
+        expect(candidate).not.toContain("<tool_call>")
+        expect(records.slice(start).filter((item) => item.role === "cloud")).toHaveLength(0)
+        // The operator approves the model's candidate unchanged; no rewritten task fields hide preparation errors.
+        await rpc.approve({ id: review.id, sessionID: session.id, revision: review.revision }, options)
+      }
+      const status = await client.session.get({ sessionID: session.id })
+      if (status.outcome === "failed" || status.outcome === "interrupted")
+        throw new Error(`Unrepaired collaboration ${status.outcome}`)
+      return status.outcome === "succeeded" ? state : undefined
+    }, "model-composed reviewed collaboration")
+    expect(state.runs.some((run) => run.status === "completed")).toBe(true)
+    for (const kind of ["redaction", "outbound"])
+      expect(state.reviews.some((review) => review.kind === kind && review.status === "approved")).toBe(true)
+    const outbound = JSON.stringify(records.slice(start).filter((item) => item.role === "cloud"))
+    for (const secret of secrets) expect(outbound).not.toContain(secret)
+    const count = records.length
+    await client.session.prompt({
+      sessionID: session.id,
+      text: "Next, calculate 137 times 29 locally. Return only the number.",
+    })
+    await client.session.wait({ sessionID: session.id }, { signal: AbortSignal.timeout(1800000) })
+    expect((await client.session.get({ sessionID: session.id })).outcome).toBe("succeeded")
+    expect(records.slice(count).filter((item) => item.role === "cloud")).toHaveLength(0)
+    const history = await client.session.context({ sessionID: session.id })
+    const last = history.findLast((message) => message.type === "assistant")
+    expect(
+      last?.type === "assistant" &&
+        last.content
+          .filter((part) => part.type === "text")
+          .map((part) => part.text)
+          .join("")
+          .trim(),
+    ).toBe("3973")
+  } finally {
+    await client.session.interrupt({ sessionID: session.id, resume: false })
+    await writeFile(
+      join(artifactRoot, "unrepaired-session.json"),
+      JSON.stringify(await client.session.context({ sessionID: session.id }), null, 2),
+    )
   }
 }, 1860000)

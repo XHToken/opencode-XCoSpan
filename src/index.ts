@@ -10,15 +10,12 @@ import { ActionError, exposeAction, isMissingSession } from "./errors"
 import { XCoSpan } from "./rpc"
 import { Config, Content, Task, RouteResult } from "./types"
 import { withRouting } from "./routing"
-import { registerRedaction } from "./redact"
+import { currentRedactionID, registerRedaction } from "./redact"
 import { withCloudNetwork } from "./network"
 import { management } from "./management"
 
 const DelegateInput = z
   .object({
-    goal: z.string().min(1),
-    context: z.string(),
-    expectedOutput: z.string().min(1),
     reviewIds: z
       .array(z.string())
       .min(1)
@@ -167,7 +164,7 @@ const plugin = {
         options: { codemode: false },
         input: DelegateInput,
         description:
-          "Delegate a self-contained task to the cloud agent. Include the goal, reviewed relevant context, expected output and approved redaction reviewIds. The user edits and approves the complete outbound content before cloud execution. Waits for the actual result.",
+          "Delegate the approved task to the cloud collaborator using reviewIds. Include a reviewed text handoff with the objective, relevant context and expected output; additional reviewed text or images provide evidence. The user edits and approves the complete outbound content before cloud execution. Waits for the actual result.",
         async execute(input, tool) {
           if (tool.agent !== PRIMARY_AGENT)
             throw new Error("Cloud delegation is available to the xcospan agent")
@@ -183,21 +180,9 @@ const plugin = {
             !RouteResult.parse(route.result).cloud
           )
             throw new Error("The current query was not routed to cloud collaboration")
-          const currentQuery = history.findLastIndex((message) => message.type === "user")
-          const lastRedaction = history
-            .slice(currentQuery + 1)
-            .flatMap((message) => (message.type === "assistant" ? message.content : []))
-            .findLast((part) => part.type === "tool" && ["redact", "redact_image"].includes(part.name))
-          if (!lastRedaction)
-            throw new Error(
-              "Call redact or redact_image and complete user review for this query before delegation",
-            )
-          if (lastRedaction.type === "tool") {
-            const state = lastRedaction.state
-            const reviewID = state.status === "completed" ? state.metadata?.reviewId : undefined
-            if (typeof reviewID !== "string" || !input.reviewIds.includes(reviewID))
-              throw new Error("Complete redaction review and include its approved reviewId before delegation")
-          }
+          const reviewID = currentRedactionID(history)
+          if (!reviewID || !input.reviewIds.includes(reviewID))
+            throw new Error("Complete redaction review and include its approved reviewId before delegation")
           const materials: Content[] = []
           for (const id of input.reviewIds) {
             const review = await reviews.get(id, tool.sessionID)
@@ -205,12 +190,14 @@ const plugin = {
               throw new Error("Material has not been approved")
             materials.push(Content.parse(review.candidate))
           }
+          const handoff = materials.findIndex((item) => item.type === "text")
+          const instructions = materials[handoff]
+          if (instructions?.type !== "text")
+            throw new Error("Include a reviewed text handoff describing the task before delegation")
           return runs.execute(
             Task.parse({
-              goal: input.goal,
-              context: input.context,
-              expectedOutput: input.expectedOutput,
-              materials,
+              instructions: instructions.text,
+              materials: materials.filter((_, index) => index !== handoff),
             }),
             { ...tool, signal: AbortSignal.any([tool.signal, lifetime.signal]) },
             config.cloudModel,
