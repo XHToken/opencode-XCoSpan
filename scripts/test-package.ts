@@ -49,7 +49,7 @@ try {
   ]
   for (const path of required) if (!files.has(path)) throw new Error("Missing package file: " + path)
   const runtime =
-    /^(src\/[^/]+\.ts|dist\/tui\.js|skills\/materials\/(SKILL\.md|extract\.ts)|server\.ts|tui\.tsx|rpc\.ts|package\.json|README\.md|CONTRIBUTING\.md|test\/README\.md|docs\/[^/]+\.md|docs\/assets\/readme\/[^/]+\.png|CHANGELOG\.md|SECURITY\.md|LICENSE)$/
+    /^(src\/[^/]+\.ts|dist\/tui\.js|skills\/materials\/(SKILL\.md|extract\.ts)|server\.ts|tui\.tsx|rpc\.ts|package\.json|README\.md|CONTRIBUTING\.md|CODE_OF_CONDUCT\.md|test\/README\.md|docs\/[^/]+\.md|docs\/assets\/readme\/[^/]+\.png|CHANGELOG\.md|SECURITY\.md|LICENSE)$/
   for (const path of files)
     if (!runtime.test(path)) throw new Error("Unexpected file included in package: " + path)
   for (const path of files) {

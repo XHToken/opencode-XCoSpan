@@ -100,7 +100,7 @@ Open [Actions](https://github.com/XHToken/opencode-XCoSpan/actions) for run hist
 | Workflow                                                                                       | Trigger                                | Purpose                                                        |
 | ---------------------------------------------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------- |
 | [Check](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml)               | Push or pull request to `main`; manual | Run shared repository and package verification                 |
-| [Verify](../.github/workflows/verify.yml)                                                      | Called by Check and Release            | Define shared security, workflow, and platform checks          |
+| [Verify](https://github.com/XHToken/opencode-XCoSpan/blob/main/.github/workflows/verify.yml)   | Called by Check and Release            | Define shared security, workflow, and platform checks          |
 | [Dependency audit](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/security.yml) | Weekly; manual                         | Check dependency advisories                                    |
 | [Live models](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/live.yml)          | Manual                                 | Exercise configured providers and native terminal interactions |
 | [Release](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/release.yml)           | Version tag; manual                    | Validate or publish a version using the selected inputs        |

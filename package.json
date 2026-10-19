@@ -39,6 +39,7 @@
     "docs/*.md",
     "docs/assets/readme/*.png",
     "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
     "test/README.md",
     "SECURITY.md",
     "CHANGELOG.md",

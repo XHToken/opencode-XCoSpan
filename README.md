@@ -136,6 +136,7 @@ Use the exact configured package specifier if you installed a version or tag. St
 | [Contributing](CONTRIBUTING.md)        | Development setup, checks, and change guidelines              |
 | [Testing](test/README.md)              | Unit, native host, and real-model validation                  |
 | [Security](SECURITY.md)                | Data access and deployment boundaries                         |
+| [Code of Conduct](CODE_OF_CONDUCT.md)  | Community standards and reporting                             |
 | [Changelog](CHANGELOG.md)              | User-visible changes and release history                      |
 | [Compatibility](docs/COMPATIBILITY.md) | Supported platforms, providers, protocols, and authentication |
 | [Releasing](docs/RELEASING.md)         | Package verification and release procedures                   |
