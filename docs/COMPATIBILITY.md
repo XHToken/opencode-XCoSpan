@@ -10,7 +10,7 @@ Per-platform validation results are recorded in the verification workflow job lo
 
 ### Windows quick start
 
-Use Windows Terminal with PowerShell. Follow [Installation](../README.md#installation) for package availability and install a published npm version with:
+Use Windows Terminal with PowerShell. Install the plugin with the command from [Installation](../README.md#installation):
 
 ```powershell
 opencode plugin add @iflytekopensource/opencode-xcospan

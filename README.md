@@ -51,8 +51,6 @@ opencode plugin add @iflytekopensource/opencode-xcospan
 
 The command installs the plugin and adds it to your global OpenCode configuration. Reopen OpenCode after installation. Windows users can run the same command in PowerShell.
 
-> **Package availability:** the npm package currently has no public release. Repository access holders can use [Source setup](CONTRIBUTING.md#source-setup).
-
 Install Bun using the [official guide](https://bun.sh/docs/installation) to use the bundled material extraction helper. See [Compatibility](docs/COMPATIBILITY.md) for operating systems, extraction binaries, OCR, and provider authentication. Source installation and development are covered in [Contributing](CONTRIBUTING.md).
 
 ## Quick start
@@ -96,7 +94,7 @@ Once XCoSpan starts, send your task in the conversation. It routes the request, 
 > **Model endpoints:** a remote provider assigned to the local role receives original task inputs and local tool results. Choose endpoints according to your data requirements. See [Configuration](docs/CONFIGURATION.md) and [Security](SECURITY.md).
 
 <p align="center">
-  <img src="docs/assets/readme/03-get-started.png" alt="Registry installation workflow: install a published package, configure local and cloud models through xcospan, then use review, status, cancellation, and recovery controls." width="1120" />
+  <img src="docs/assets/readme/03-get-started.png" alt="Installation workflow: install the npm package, configure local and cloud models through xcospan, then use review, status, cancellation, and recovery controls." width="1120" />
 </p>
 
 ## Review and control
