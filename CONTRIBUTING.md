@@ -46,6 +46,8 @@ Keep private documents, credentials, personal configuration, request logs and in
 
 ## Changes
 
+Create a focused branch from `main` and target `main` in pull requests. The [Check workflow](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml) validates pushes and pull requests for `main`.
+
 - Write documentation, UI text, and model guidance in English. Describe capabilities, prerequisites, actions, outcomes, and relevant limitations directly. Keep wording factual and scoped to the reader's task.
 - Trace callers, exports, tests and documentation before changing a contract.
 - Add behavioral coverage for approval versions, cancellation, context filtering and delivery.

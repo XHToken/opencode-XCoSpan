@@ -4,7 +4,7 @@
 
 Use [GitHub private vulnerability reporting](https://github.com/XHToken/opencode-XCoSpan/security/advisories/new) when the repository offers that form. If it is unavailable, open an issue containing only a request for a private reporting channel. Share reproduction details after a maintainer supplies that channel. Keep exploit details and private materials out of public issues.
 
-Security fixes target the latest published version. Include the affected version or commit, OpenCode version, operating system, and a minimal synthetic reproduction in each report.
+Security reports are accepted for `main` and the latest published version. Fixes land on `main` and ship in a release. Include the affected version or commit, OpenCode version, operating system, and a minimal synthetic reproduction in each report.
 
 ## Data and execution boundaries
 

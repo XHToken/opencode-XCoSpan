@@ -2,6 +2,7 @@
 
 **Local execution and reviewed cloud collaboration for OpenCode.**
 
+[![Check](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml?query=branch%3Amain)
 [![OpenCode](https://img.shields.io/badge/OpenCode-2.0.27-202124)](https://opencode.ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-60794F)](LICENSE)
 

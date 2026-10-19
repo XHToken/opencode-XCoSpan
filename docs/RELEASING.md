@@ -93,6 +93,18 @@ Use a unique prerelease version with an explicit `test` dist-tag. Publish the ve
 
 Remove only the test version with `npm unpublish <name>@<test-version>`. Verify that the version and its dist-tag are no longer available. Unpublishing the last version may require `--force` and prevents new publications under that package name for 24 hours; the removed version can never be reused. Plan tests around that registry constraint.
 
+## Workflow navigation
+
+Open [Actions](https://github.com/XHToken/opencode-XCoSpan/actions) for run history, or select a workflow below to inspect its runs and available manual inputs. Manual runs use the selected branch or tag.
+
+| Workflow                                                                                       | Trigger                                | Purpose                                                        |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------- |
+| [Check](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml)               | Push or pull request to `main`; manual | Run shared repository and package verification                 |
+| [Verify](../.github/workflows/verify.yml)                                                      | Called by Check and Release            | Define shared security, workflow, and platform checks          |
+| [Dependency audit](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/security.yml) | Weekly; manual                         | Check dependency advisories                                    |
+| [Live models](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/live.yml)          | Manual                                 | Exercise configured providers and native terminal interactions |
+| [Release](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/release.yml)           | Version tag; manual                    | Validate or publish a version using the selected inputs        |
+
 ## Other workflows
 
 - **Live models:** explicit manual run with the `live-tests` environment's `XCOSPAN_LIVE_CONFIG` secret. Supply the JSON schema in [Testing](../test/README.md), with credentials resolved in provider settings. The runner deletes configuration and request diagnostics after the run. Paid model tests never run for pull requests.

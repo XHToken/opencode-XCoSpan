@@ -60,7 +60,7 @@ TUI <-- native session and tool events
 
 Root-level `server.ts`, `tui.tsx`, and `rpc.ts` are thin entrypoints required by OpenCode's local directory discovery protocol. They connect the server module, compiled TUI, and RPC contract. Package exports use the same implementation. OpenCode loads server-side TypeScript; `src/tui/` is compiled to `dist/tui.js`, with OpenTUI and Solid supplied by the host's shared runtime.
 
-Users install the registry package with `opencode plugin add @iflytekopensource/opencode-xcospan`, then configure model roles through `/xcospan`. The native installer manages the global package entry; setup and lifecycle controls use the host's configuration sources. `bun run setup` registers a contributor's source checkout.
+Follow the [Quick start](../README.md#quick-start) to install a source checkout with `bun run setup`, then configure model roles through `/xcospan`. Setup registers the checkout in OpenCode's global configuration. For a published package, `opencode plugin add @iflytekopensource/opencode-xcospan` registers the npm package through the native installer. Setup and lifecycle controls use the host's configuration sources; the [installation guide](../README.md#update-or-uninstall) covers updates and removal for each source.
 
 The package allowlist includes server source, compiled TUI, the shipped Skill, and essential package documentation. Tests, fixtures, build scripts, and local records stay in the development checkout. `test:package` checks the tarball, tests native package commands against an isolated registry, installs it with npm and Bun, and runs real host integration tests. The materials helper runs through Bun on PATH; host-loaded plugin code uses OpenCode's runtime.
 
