@@ -6,7 +6,7 @@
 
 XCoSpan brings **local execution and reviewed cloud collaboration into one OpenCode session**. Choose your local and cloud models through `/xcospan`, then send tasks normally. Each new request is routed; the local model plans the work, uses tools and Skills, and prepares any cloud task for your review. Approved work returns to the local model for verification and delivery.
 
-[Quick start](#quick-start) · [Architecture](#architecture) · [Features](#features) · [Review and control](#review-and-control) · [Commands](#commands) · [Documentation](#documentation-and-contributing)
+[Installation](#installation) · [Quick start](#quick-start) · [Architecture](#architecture) · [Features](#features) · [Review and control](#review-and-control) · [Commands](#commands) · [Documentation](#documentation-and-contributing)
 
 ## Architecture
 
@@ -36,31 +36,30 @@ The local model selects the task's tools, context, and materials. XCoSpan connec
 - **Cancellation and recovery** — stop active work or recover delivery of a completed cloud result from persisted records.
 - **Native setup and lifecycle** — configure models, start, stop, disable, enable, and remove XCoSpan through `/xcospan`.
 
-## Quick start
+## Installation
 
-### Requirements
+| Component           | Requirement                                |
+| ------------------- | ------------------------------------------ |
+| OpenCode            | **2.0.27**                                 |
+| Material extraction | **Bun 1.4.3** on the PATH used by OpenCode |
 
-| Component           | Requirement                                                                      |
-| ------------------- | -------------------------------------------------------------------------------- |
-| OpenCode            | **2.0.27**                                                                       |
-| Bun                 | **1.4.3**, available on the PATH used by OpenCode                                |
-| Source installation | Git and read access to this repository                                           |
-| Models              | Local and cloud model roles with tool calling; both roles may use the same model |
-
-Install Bun using the [official guide](https://bun.sh/docs/installation). Windows users can run the commands below in PowerShell. See [Compatibility](docs/COMPATIBILITY.md) for operating systems, extraction binaries, OCR, and provider authentication.
-
-### 1. Install
+Install the npm package through OpenCode's plugin manager:
 
 ```sh
-git clone --depth 1 --branch main https://github.com/XHToken/opencode-XCoSpan.git
-cd opencode-XCoSpan
-bun install --frozen-lockfile
-bun run setup
+opencode plugin add @iflytekopensource/opencode-xcospan
 ```
 
-Setup builds the plugin and registers this checkout in your global OpenCode configuration. Existing provider accounts and workspace settings are retained. Keep the checkout at this location; OpenCode loads the plugin from it. Authenticate Git with your GitHub account to access the private repository.
+The command installs the plugin and adds it to your global OpenCode configuration. Reopen OpenCode after installation. Windows users can run the same command in PowerShell.
 
-### 2. Open your workspace
+> **Package availability:** the npm package currently has no public release. Repository access holders can use [Source setup](CONTRIBUTING.md#source-setup).
+
+Install Bun using the [official guide](https://bun.sh/docs/installation) to use the bundled material extraction helper. See [Compatibility](docs/COMPATIBILITY.md) for operating systems, extraction binaries, OCR, and provider authentication. Source installation and development are covered in [Contributing](CONTRIBUTING.md).
+
+## Quick start
+
+After [installation](#installation), configure your models and send a task in OpenCode.
+
+### 1. Open your workspace
 
 Reopen OpenCode after installation. From the directory where you want to work, run:
 
@@ -68,7 +67,7 @@ Reopen OpenCode after installation. From the directory where you want to work, r
 opencode
 ```
 
-### 3. Choose models and start
+### 2. Choose models
 
 Enter `/xcospan` in the conversation and follow the interface:
 
@@ -88,9 +87,17 @@ Configure models
 | Add your own endpoint    | Select **Add a local or custom provider**                                      |
 | Enable future sessions   | Select **Use XCoSpan by default**, or open `/xcospan` → **Start** in a session |
 
-Connection tests send requests to the selected providers and incur usage. Once XCoSpan starts, send your task normally. Review each redaction and the complete outbound task when prompted.
+Both model roles require tool calling and may use the same model. Connection tests send requests to the selected providers and incur usage.
+
+### 3. Send a task
+
+Once XCoSpan starts, send your task in the conversation. It routes the request, works locally, and prepares cloud collaboration when needed. Review each redaction and the complete outbound task when prompted, then follow progress and receive the result in the same session.
 
 > **Model endpoints:** a remote provider assigned to the local role receives original task inputs and local tool results. Choose endpoints according to your data requirements. See [Configuration](docs/CONFIGURATION.md) and [Security](SECURITY.md).
+
+<p align="center">
+  <img src="docs/assets/readme/03-get-started.png" alt="Registry installation workflow: install a published package, configure local and cloud models through xcospan, then use review, status, cancellation, and recovery controls." width="1120" />
+</p>
 
 ## Review and control
 
@@ -160,43 +167,22 @@ The extraction helper uses [Xberg](https://github.com/xberg-io/xberg/tree/main/c
 
 ## Update or uninstall
 
-From the source checkout directory:
-
-```sh
-git pull --ff-only origin main
-bun install --frozen-lockfile
-bun run build
-```
-
-Stop active work before updating, then reopen OpenCode. To uninstall, open `/xcospan` → **Remove plugin** for the registered checkout. Confirm removal in `/plugins` before deleting the checkout directory.
-
-<details>
-<summary>Registry installation and lifecycle</summary>
-
-Registry installation requires a published version of `@iflytekopensource/opencode-xcospan`. Check availability before installing:
-
-```sh
-npm view @iflytekopensource/opencode-xcospan version
-opencode plugin add @iflytekopensource/opencode-xcospan
-```
-
-Remove an existing checkout entry through `/xcospan` before adding the registry package.
-
-<p align="center">
-  <img src="docs/assets/readme/03-get-started.png" alt="Registry installation workflow: install a published package, configure local and cloud models through xcospan, then use review, status, cancellation, and recovery controls." width="1120" />
-</p>
-
-Manage the installed registry package with:
+Check for updates and update the installed npm package:
 
 ```sh
 opencode plugin check @iflytekopensource/opencode-xcospan
 opencode plugin update @iflytekopensource/opencode-xcospan
+```
+
+Stop active work before updating, then reopen OpenCode. Use the exact configured package specifier if you installed a version or tag.
+
+To remove the plugin from global configuration:
+
+```sh
 opencode plugin remove @iflytekopensource/opencode-xcospan
 ```
 
-Use the exact configured package specifier if you installed a version or tag. Stop active work before updating, then reopen OpenCode.
-
-</details>
+You can also open `/xcospan` → **Remove plugin** to select the configuration source. Confirm removal in `/plugins` and reopen OpenCode. Model accounts, conversations, and user files remain available. Source checkout updates and removal are described in [Contributing](CONTRIBUTING.md#update-or-remove-a-source-checkout).
 
 ## Documentation and contributing
 

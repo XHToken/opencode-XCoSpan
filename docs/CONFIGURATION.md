@@ -2,7 +2,7 @@
 
 ## Models and scope
 
-Install through the [Quick start](../README.md#quick-start), then enter `/xcospan` in OpenCode and choose **Configure models** to select the local-role and cloud models. The interface reads OpenCode's model catalog, supports account connections and custom services, and can check each model's connection and tool-calling support. Checks incur actual provider usage and can be cancelled.
+Follow [Installation](../README.md#installation), then enter `/xcospan` in OpenCode and choose **Configure models** to select the local-role and cloud models. The interface reads OpenCode's model catalog, supports account connections and custom services, and can check each model's connection and tool-calling support. Checks incur actual provider usage and can be cancelled.
 
 Settings are saved to the selected OpenCode JSON / JSONC source, preserving unrelated values and comments. Concurrent changes require a reload. Stop active tasks before changing models. Saving preserves the current default agent; users can explicitly choose XCoSpan as the default for new sessions.
 

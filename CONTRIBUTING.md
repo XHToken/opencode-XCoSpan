@@ -35,6 +35,18 @@ bun run setup
 
 When switching between a source checkout and the npm package, remove the previous entry through `/xcospan` first, then install the chosen source. Check `/plugins` to confirm the active loading source. Native package update commands apply to registry installations; rebuild a source checkout with `bun run build`.
 
+### Update or remove a source checkout
+
+Stop active work, then run these commands from the registered checkout:
+
+```sh
+git pull --ff-only origin main
+bun install --frozen-lockfile
+bun run build
+```
+
+Reopen OpenCode after updating. To uninstall, open `/xcospan` → **Remove plugin** for the checkout entry. Confirm removal in `/plugins` before deleting the checkout directory. Source installation requires Git and repository read access.
+
 ## Repository boundaries
 
 ```text

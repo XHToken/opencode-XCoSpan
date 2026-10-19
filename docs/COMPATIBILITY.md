@@ -10,14 +10,13 @@ Per-platform validation results are recorded in the verification workflow job lo
 
 ### Windows quick start
 
-Use Windows Terminal with PowerShell. The [Quick start](../README.md#quick-start) commands are the same on Windows:
+Use Windows Terminal with PowerShell. Follow [Installation](../README.md#installation) for package availability and install a published npm version with:
 
 ```powershell
-git clone --depth 1 --branch main https://github.com/XHToken/opencode-XCoSpan.git
-cd opencode-XCoSpan
-bun install --frozen-lockfile
-bun run setup
+opencode plugin add @iflytekopensource/opencode-xcospan
 ```
+
+For development checkouts, follow [Source setup](../CONTRIBUTING.md#source-setup).
 
 Open your workspace in OpenCode, then enter `/xcospan` to choose accounts and models, test the connection, and start. Keep Bun on the PATH inherited by OpenCode when using the material helper. Install Bun using its [official Windows instructions](https://bun.com/docs/installation), then reopen the terminal and OpenCode.
 
