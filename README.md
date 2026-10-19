@@ -43,7 +43,9 @@ The local model selects the task's tools, context, and materials. XCoSpan connec
 | OpenCode            | **2.0.27**                                 |
 | Material extraction | **Bun 1.4.3** on the PATH used by OpenCode |
 
-Install the npm package through OpenCode's plugin manager:
+### npm package
+
+Install through OpenCode's plugin manager:
 
 ```sh
 opencode plugin add @iflytekopensource/opencode-xcospan
@@ -51,7 +53,20 @@ opencode plugin add @iflytekopensource/opencode-xcospan
 
 The command installs the plugin and adds it to your global OpenCode configuration. Reopen OpenCode after installation. Windows users can run the same command in PowerShell.
 
-Install Bun using the [official guide](https://bun.sh/docs/installation) to use the bundled material extraction helper. See [Compatibility](docs/COMPATIBILITY.md) for operating systems, extraction binaries, OCR, and provider authentication. Source installation and development are covered in [Contributing](CONTRIBUTING.md).
+Install Bun using the [official guide](https://bun.sh/docs/installation) to use the bundled material extraction helper. See [Compatibility](docs/COMPATIBILITY.md) for operating systems, extraction binaries, OCR, and provider authentication. Development guidance is available in [Contributing](CONTRIBUTING.md).
+
+### From source
+
+With Git and Bun 1.4.3 installed, run:
+
+```sh
+git clone --depth 1 --branch main https://github.com/XHToken/opencode-XCoSpan.git
+cd opencode-XCoSpan
+bun install --frozen-lockfile
+bun run setup
+```
+
+Setup builds the plugin and registers the checkout in your global OpenCode configuration. Keep the checkout at this location and reopen OpenCode. See [Contributing](CONTRIBUTING.md#update-or-remove-a-source-checkout) for source updates and removal.
 
 ## Quick start
 
