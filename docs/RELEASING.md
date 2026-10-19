@@ -2,6 +2,7 @@
 
 ## Repository configuration
 
+- Align `LICENSE`, the package license identifier, README badges, and contribution terms with the [XHToken community license](https://github.com/XHToken/community/blob/main/LICENSE). Preserve contributor attribution and third-party notices. Verify community, conduct, and security contacts against the [community policies](https://github.com/XHToken/community#governance--policies).
 - Set `main` as the default branch. Pull requests target `main`; Check validates pushes and pull requests for that branch.
 - Configure the `npm` environment with `NPM_TOKEN`, a granular token with publication rights to the package scope. Publication checks for this secret before the verification matrix. Validation runs with `publish=false` do not require publication credentials.
 - Configure the `live-tests` environment with `XCOSPAN_LIVE_CONFIG` using the schema in [Testing](../test/README.md#live-model-configuration). Live models checks for this secret before installing dependencies.

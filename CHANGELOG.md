@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Community
+
+- Adopt the XHToken community license (Apache-2.0) across the license text, package metadata, and documentation, retaining existing contributor attribution.
+- Connect contribution guidance, conduct reporting, security reporting, and issue entry points to XHToken community policies.
+
 ### Collaboration
 
 - Per-request local/cloud routing with configurable model roles and a strict `{ reason, route: 0 | 1 }` service contract.

@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/XHToken/opencode-XCoSpan/security/advisories/new) when the repository offers that form. If it is unavailable, open an issue containing only a request for a private reporting channel. Share reproduction details after a maintainer supplies that channel. Keep exploit details and private materials out of public issues.
+Follow the [XHToken community security policy](https://github.com/XHToken/community/blob/main/SECURITY.md). Report vulnerabilities privately to [tokenspark-security@googlegroups.com](mailto:tokenspark-security@googlegroups.com), identifying this repository and the affected version or commit. You can also use [GitHub private vulnerability reporting](https://github.com/XHToken/opencode-XCoSpan/security/advisories/new) when available. Keep exploit details and private materials out of public issues.
 
 Security reports are accepted for `main` and the latest published version. Fixes land on `main` and ship in a release. Include the affected version or commit, OpenCode version, operating system, and a minimal synthetic reproduction in each report.
 

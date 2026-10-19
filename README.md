@@ -2,7 +2,7 @@
 
 > Local–cloud collaboration for [OpenCode](https://opencode.ai) — Per-request Routing, Local Redaction, Editable Review, Approved Cloud Tasks, and Live Progress.
 
-[![CI](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml/badge.svg?branch=main&event=push)](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml?query=branch%3Amain) [![OpenCode](https://img.shields.io/badge/OpenCode-2.0.27-E8833A)](https://opencode.ai/v2/docs/build/plugins) [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22-43853D)](package.json) [![Bun](https://img.shields.io/badge/Bun-1.4.3-202124)](https://bun.sh/docs/installation) [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](CONTRIBUTING.md) [![License: MIT](https://img.shields.io/badge/License-MIT-7560A8)](LICENSE)
+[![CI](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml/badge.svg?branch=main&event=push)](https://github.com/XHToken/opencode-XCoSpan/actions/workflows/check.yml?query=branch%3Amain) [![OpenCode](https://img.shields.io/badge/OpenCode-2.0.27-E8833A)](https://opencode.ai/v2/docs/build/plugins) [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22-43853D)](package.json) [![Bun](https://img.shields.io/badge/Bun-1.4.3-202124)](https://bun.sh/docs/installation) [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](CONTRIBUTING.md) [![License: XHToken community](https://img.shields.io/badge/license-XHToken%20community-green)](https://github.com/XHToken/community/blob/main/LICENSE) [![Community](https://img.shields.io/badge/XHToken-Community-5865F2)](https://github.com/XHToken/community#contact)
 
 XCoSpan brings **local execution and reviewed cloud collaboration into one OpenCode session**. Choose your local and cloud models through `/xcospan`, then send tasks normally. Each new request is routed; the local model plans the work, uses tools and Skills, and prepares any cloud task for your review. Approved work returns to the local model for verification and delivery.
 
@@ -224,6 +224,12 @@ bun run build
 
 `check` runs type checks, formatting checks, and unit tests. Follow [Contributing](CONTRIBUTING.md) for native host validation and [Testing](test/README.md) for opt-in real-model tests. Report reproducible issues and propose focused changes on [GitHub](https://github.com/XHToken/opencode-XCoSpan/issues).
 
+## Community
+
+XCoSpan is part of the [XHToken community](https://github.com/XHToken/community). Join the [community channels](https://github.com/XHToken/community#contact) for ecosystem discussions. Use this repository's [issues](https://github.com/XHToken/opencode-XCoSpan/issues) for bugs and feature requests, and follow [Contributing](CONTRIBUTING.md) to submit changes.
+
+Contributors follow the [XHToken Code of Conduct](CODE_OF_CONDUCT.md) and sign the [Contributor License Agreement](https://github.com/XHToken/community/blob/main/CLA.md).
+
 ## License
 
-[MIT](LICENSE). Package documentation, diagrams, and community guidance are included in the distribution.
+Licensed under the [XHToken community license](https://github.com/XHToken/community/blob/main/LICENSE) (Apache-2.0). See [LICENSE](LICENSE) for the full text and copyright notices. Package documentation, diagrams, and community guidance are included in the distribution.

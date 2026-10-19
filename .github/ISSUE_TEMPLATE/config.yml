@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: XHToken community
+    url: https://github.com/XHToken/community#contact
+    about: Community discussions, contributor onboarding, and organization contacts.
+  - name: Security vulnerability
+    url: https://github.com/XHToken/opencode-XCoSpan/blob/main/SECURITY.md
+    about: Use the private reporting channels described in the security policy.

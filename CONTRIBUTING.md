@@ -2,6 +2,10 @@
 
 Use the supported OpenCode V2 APIs for models, sessions, tools, Skills and TUI. Keep production model choices in configuration and changes focused on a concrete user workflow.
 
+## Community and contribution agreement
+
+This project participates in the [XHToken community](https://github.com/XHToken/community). Contributions follow the [Code of Conduct](CODE_OF_CONDUCT.md). XHToken requires each contributor to sign its [Contributor License Agreement](https://github.com/XHToken/community/blob/main/CLA.md). Contact the [community maintainers](https://github.com/XHToken/community#contact) to complete that process before your contribution is merged.
+
 ## Development
 
 Use Bun 1.4.3, Node.js 22+ and OpenCode 2.0.27. `bun.lock` is the dependency lockfile used by development and CI.
@@ -66,4 +70,4 @@ The `files` allowlist defines the artifact; exported entrypoints and Skill resou
 
 Keep the PR description focused on the problem, resulting behavior and verification. Keep dependencies and tooling scoped to the change.
 
-Contributions are provided under the repository's MIT license. Include attribution and license notices required by third-party code or assets.
+Contributions are provided under the [XHToken community license](https://github.com/XHToken/community/blob/main/LICENSE) (Apache-2.0); the full text is in [LICENSE](LICENSE). Include attribution and license notices required by third-party code or assets.
