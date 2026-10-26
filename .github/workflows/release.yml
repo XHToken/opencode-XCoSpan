@@ -55,7 +55,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::Configure NPM_TOKEN in the npm environment before publishing."
+            echo "::error::Configure NPM_TOKEN as a repository or npm environment secret before publishing."
             exit 1
           fi
   verify:
